@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// Central ThemeData for CurrencySnap.
-/// Keep all visual tokens here so screens never hardcode colors/styles.
+/// Central theme configuration for the application.
 class AppTheme {
   AppTheme._();
 
@@ -18,9 +17,7 @@ class AppTheme {
         onPrimary: AppColors.onPrimary,
         onSurface: AppColors.textPrimary,
       ),
-
-      // Typography
-      fontFamily: 'Inter', // swap for your chosen font asset if added
+      fontFamily: 'Inter',
       textTheme: const TextTheme(
         headlineMedium: TextStyle(
           fontSize: 22,
@@ -48,16 +45,12 @@ class AppTheme {
           color: AppColors.textMuted,
         ),
       ),
-
-      // AppBar
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         centerTitle: false,
       ),
-
-      // Cards (used for "You send" / "They receive" / favorite tiles)
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
@@ -67,8 +60,6 @@ class AppTheme {
         ),
         margin: EdgeInsets.zero,
       ),
-
-      // Buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -81,8 +72,6 @@ class AppTheme {
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
-
-      // Bottom navigation (Home / Favorites / Settings)
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.background,
         selectedItemColor: AppColors.primary,
@@ -91,8 +80,6 @@ class AppTheme {
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
-
-      // Input fields (amount input, search in currency picker)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
@@ -106,7 +93,6 @@ class AppTheme {
         ),
         hintStyle: const TextStyle(color: AppColors.textMuted),
       ),
-
       dividerTheme: const DividerThemeData(
         color: AppColors.border,
         thickness: 1,

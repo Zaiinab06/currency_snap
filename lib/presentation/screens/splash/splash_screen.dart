@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// Temporary placeholder Splash screen.
-/// Will be replaced with the full animated version (logo + auto-navigate)
-/// once the Home/Converter screen and Cubit are wired up.
+/// Splash screen displaying app branding and initializing dependencies.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 

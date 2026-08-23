@@ -1,9 +1,8 @@
 import 'package:equatable/equatable.dart';
 
-/// Represents a single saved currency pair in the Favorites screen,
-/// e.g. USD -> PKR, with the rate captured at save/last-refresh time.
+/// Data model representing a saved favorite currency pair.
 class FavoritePairModel extends Equatable {
-  final String id; // stable id, e.g. "USD_PKR"
+  final String id;
   final String fromCurrency;
   final String toCurrency;
   final double rate;
@@ -17,7 +16,7 @@ class FavoritePairModel extends Equatable {
     required this.savedAt,
   });
 
-  /// Convenience constructor that derives a stable [id] from the pair.
+  /// Creates a [FavoritePairModel] generating an identifier from currencies.
   factory FavoritePairModel.create({
     required String fromCurrency,
     required String toCurrency,
@@ -32,6 +31,7 @@ class FavoritePairModel extends Equatable {
     );
   }
 
+  /// Deserializes a [FavoritePairModel] from JSON.
   factory FavoritePairModel.fromJson(Map<String, dynamic> json) {
     return FavoritePairModel(
       id: json['id'] as String,
@@ -42,6 +42,7 @@ class FavoritePairModel extends Equatable {
     );
   }
 
+  /// Serializes the model into a JSON map.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -52,8 +53,7 @@ class FavoritePairModel extends Equatable {
     };
   }
 
-  /// Returns a copy with an updated rate (e.g. after a fresh fetch),
-  /// keeping the original id/savedAt.
+  /// Returns a copy of this pair with an updated exchange [newRate].
   FavoritePairModel copyWithRate(double newRate) {
     return FavoritePairModel(
       id: id,

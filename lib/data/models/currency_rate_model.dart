@@ -1,14 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-/// Represents a set of exchange rates for a given base currency,
-/// as returned by the API (or restored from local cache).
-///
-/// Example API shape (open.er-api.com):
-/// {
-///   "base_code": "USD",
-///   "rates": { "EUR": 0.92, "GBP": 0.79, "PKR": 278.5, ... },
-///   "time_last_update_utc": "..."
-/// }
+/// Data model representing currency exchange rates for a base currency.
 class CurrencyRateModel extends Equatable {
   final String baseCurrency;
   final Map<String, double> rates;
@@ -20,7 +12,7 @@ class CurrencyRateModel extends Equatable {
     required this.lastUpdated,
   });
 
-  /// Build from the raw API JSON response.
+  /// Creates a [CurrencyRateModel] from API response JSON.
   factory CurrencyRateModel.fromJson(Map<String, dynamic> json) {
     final rawRates = json['rates'] as Map<String, dynamic>? ?? {};
     return CurrencyRateModel(
@@ -28,12 +20,11 @@ class CurrencyRateModel extends Equatable {
       rates: rawRates.map(
         (key, value) => MapEntry(key, (value as num).toDouble()),
       ),
-      // API gives a formatted string; when parsing live, "now" is accurate.
       lastUpdated: DateTime.now(),
     );
   }
 
-  /// Build from a locally cached JSON blob (has its own stored timestamp).
+  /// Creates a [CurrencyRateModel] from cached local JSON.
   factory CurrencyRateModel.fromCacheJson(Map<String, dynamic> json) {
     final rawRates = json['rates'] as Map<String, dynamic>? ?? {};
     return CurrencyRateModel(
@@ -45,7 +36,7 @@ class CurrencyRateModel extends Equatable {
     );
   }
 
-  /// Serialize for local caching (SharedPreferences, as a JSON string).
+  /// Serializes the model into a JSON-compatible map for caching.
   Map<String, dynamic> toCacheJson() {
     return {
       'baseCurrency': baseCurrency,
@@ -54,8 +45,9 @@ class CurrencyRateModel extends Equatable {
     };
   }
 
-  /// Convert [amount] from [baseCurrency] into [targetCurrency].
-  /// Returns null if the target currency isn't in the rate table.
+  /// Converts [amount] from [baseCurrency] to [targetCurrency].
+  ///
+  /// Returns null if [targetCurrency] is not available in the rates table.
   double? convert({required String targetCurrency, required double amount}) {
     final rate = rates[targetCurrency];
     if (rate == null) return null;

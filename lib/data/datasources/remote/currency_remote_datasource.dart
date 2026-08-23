@@ -3,16 +3,16 @@ import '../../models/currency_rate_model.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/errors/app_exceptions.dart';
 
-/// Fetches live exchange rate data from the API.
-/// Knows nothing about caching or favorites — its only job is the network call.
+/// Remote data source responsible for fetching live exchange rates from the API.
 class CurrencyRemoteDataSource {
   final Dio _dio;
 
   CurrencyRemoteDataSource({Dio? dio}) : _dio = dio ?? DioClient.instance;
 
-  /// Fetches latest rates for [baseCurrency] (e.g. "USD").
-  /// Throws [NetworkException] on connectivity/server failure,
-  /// or [DataParsingException] if the response shape is unexpected.
+  /// Fetches latest exchange rates for [baseCurrency].
+  ///
+  /// Throws [NetworkException] on connectivity or server errors,
+  /// or [DataParsingException] if the response payload cannot be parsed.
   Future<CurrencyRateModel> getLatestRates(String baseCurrency) async {
     try {
       final response = await _dio.get('/$baseCurrency');
@@ -25,7 +25,6 @@ class CurrencyRemoteDataSource {
 
       return CurrencyRateModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      // Covers: no internet, timeout, connection refused, 4xx/5xx, etc.
       throw NetworkException(_mapDioError(e));
     } on NetworkException {
       rethrow;

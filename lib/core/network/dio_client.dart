@@ -1,9 +1,7 @@
 import 'package:dio/dio.dart';
 import '../constants/app_constants.dart';
 
-/// Central Dio instance used across the app for all HTTP calls.
-/// Keeping this in one place means timeouts, headers, and interceptors
-/// are configured once, not duplicated per API call.
+/// Central Dio HTTP client singleton configured with base options and interceptors.
 class DioClient {
   DioClient._();
 
@@ -24,8 +22,6 @@ class DioClient {
       ),
     );
 
-    // Basic logging in debug builds only — helps verify requests/responses
-    // while building, without leaking anything in release mode.
     dio.interceptors.add(
       LogInterceptor(requestBody: false, responseBody: true, error: true),
     );

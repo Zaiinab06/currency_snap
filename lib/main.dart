@@ -16,8 +16,6 @@ class CurrencySnapApp extends StatelessWidget {
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      // TODO: replace with SplashScreen -> HomeScreen navigation flow
-      // once app_router.dart and the Home/Converter screen are built.
       home: const SplashScreen(),
     );
   }

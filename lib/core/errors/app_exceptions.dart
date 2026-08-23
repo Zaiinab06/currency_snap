@@ -1,6 +1,4 @@
-/// Thrown when the remote API call fails (no internet, timeout, server error).
-/// The repository catches this specifically to trigger the offline-cache
-/// fallback, rather than crashing the app.
+/// Thrown when a remote API call fails due to network, timeout, or server errors.
 class NetworkException implements Exception {
   final String message;
   const NetworkException(this.message);
@@ -9,7 +7,7 @@ class NetworkException implements Exception {
   String toString() => 'NetworkException: $message';
 }
 
-/// Thrown when the API responds but the payload is missing/unexpected data.
+/// Thrown when the API response payload is invalid or cannot be parsed.
 class DataParsingException implements Exception {
   final String message;
   const DataParsingException(this.message);
@@ -18,8 +16,7 @@ class DataParsingException implements Exception {
   String toString() => 'DataParsingException: $message';
 }
 
-/// Thrown when there is no cached data available to fall back to
-/// (e.g. first app launch with no internet).
+/// Thrown when no cached data is available locally as a fallback.
 class NoCachedDataException implements Exception {
   final String message;
   const NoCachedDataException(this.message);
