@@ -1,27 +1,40 @@
+import 'package:currency_snap/data/models/favourite_pair_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/favourite_pair_model.dart';
 import '../../data/repositories/currency_repository.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/errors/app_exceptions.dart';
 import 'convert_state.dart';
 
-/// Cubit managing currency conversion state and rate updates.
+/// Drives the Home/Converter screen.
+///
+/// Rates are fetched once for a fixed anchor currency (see
+/// [AppConstants.defaultBaseCurrency]) and cached. Every subsequent
+/// currency change — swap, picking a new "from", or a new "to" — is
+/// pure client-side cross-rate math against that same rate table.
+/// This avoids re-fetching (and re-hitting the offline/CORS fallback)
+/// on every interaction, and prevents the from/to mismatch bug that
+/// happens when a fallback-to-cache returns a different base than the
+/// one just requested.
 class ConvertCubit extends Cubit<ConvertState> {
   final CurrencyRepository _repository;
 
   ConvertCubit(this._repository) : super(const ConvertInitial());
 
-  /// Loads exchange rates for [baseCurrency] and calculates converted amount.
+  /// Fetches the anchor rate table once (live, falling back to cache
+  /// on failure) and sets up the initial from/to pair.
   Future<void> loadRates({
-    String baseCurrency = AppConstants.defaultBaseCurrency,
-    String targetCurrency = AppConstants.defaultTargetCurrency,
+    String fromCurrency = AppConstants.defaultBaseCurrency,
+    String toCurrency = AppConstants.defaultTargetCurrency,
     double amount = 100,
   }) async {
     emit(const ConvertLoading());
     try {
-      final result = await _repository.getRates(baseCurrency);
-      final converted = result.rates.convert(
-        targetCurrency: targetCurrency,
+      final result = await _repository.getRates(
+        AppConstants.defaultBaseCurrency,
+      );
+      final converted = result.rates.convertBetween(
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
         amount: amount,
       );
 
@@ -29,8 +42,8 @@ class ConvertCubit extends Cubit<ConvertState> {
         ConvertLoaded(
           rates: result.rates,
           isFromCache: result.isFromCache,
-          fromCurrency: baseCurrency,
-          toCurrency: targetCurrency,
+          fromCurrency: fromCurrency,
+          toCurrency: toCurrency,
           amount: amount,
           convertedAmount: converted,
         ),
@@ -38,58 +51,74 @@ class ConvertCubit extends Cubit<ConvertState> {
     } on NoCachedDataException catch (e) {
       emit(ConvertError(e.message));
     } catch (e) {
-      emit(const ConvertError('Something went wrong. Please try again.'));
+      emit(ConvertError('Something went wrong. Please try again.'));
     }
   }
 
-  /// Updates the conversion for a newly specified [newAmount].
+  /// Recalculates the converted amount for a new input amount.
+  /// Pure math — no network call.
   void updateAmount(double newAmount) {
     final current = state;
     if (current is! ConvertLoaded) return;
 
-    final converted = current.rates.convert(
-      targetCurrency: current.toCurrency,
+    final converted = current.rates.convertBetween(
+      fromCurrency: current.fromCurrency,
+      toCurrency: current.toCurrency,
       amount: newAmount,
     );
 
     emit(current.copyWith(amount: newAmount, convertedAmount: converted));
   }
 
-  /// Swaps base and target currencies and reloads rates.
-  Future<void> swapCurrencies() async {
+  /// Swaps "from" and "to" and recalculates. Pure math — no network call.
+  void swapCurrencies() {
     final current = state;
     if (current is! ConvertLoaded) return;
 
-    await loadRates(
-      baseCurrency: current.toCurrency,
-      targetCurrency: current.fromCurrency,
+    final converted = current.rates.convertBetween(
+      fromCurrency: current.toCurrency,
+      toCurrency: current.fromCurrency,
       amount: current.amount,
     );
-  }
 
-  /// Changes the base currency and reloads rates.
-  Future<void> changeBaseCurrency(String newBaseCurrency) async {
-    final current = state;
-    final target =
-        current is ConvertLoaded
-            ? current.toCurrency
-            : AppConstants.defaultTargetCurrency;
-    final amount = current is ConvertLoaded ? current.amount : 100.0;
-
-    await loadRates(
-      baseCurrency: newBaseCurrency,
-      targetCurrency: target,
-      amount: amount,
+    emit(
+      current.copyWith(
+        fromCurrency: current.toCurrency,
+        toCurrency: current.fromCurrency,
+        convertedAmount: converted,
+      ),
     );
   }
 
-  /// Changes the target currency and recalculates the converted amount.
+  /// Changes the source ("you send") currency and recalculates.
+  /// Pure math — no network call.
+  void changeSourceCurrency(String newSourceCurrency) {
+    final current = state;
+    if (current is! ConvertLoaded) return;
+
+    final converted = current.rates.convertBetween(
+      fromCurrency: newSourceCurrency,
+      toCurrency: current.toCurrency,
+      amount: current.amount,
+    );
+
+    emit(
+      current.copyWith(
+        fromCurrency: newSourceCurrency,
+        convertedAmount: converted,
+      ),
+    );
+  }
+
+  /// Changes the target ("they receive") currency and recalculates.
+  /// Pure math — no network call.
   void changeTargetCurrency(String newTargetCurrency) {
     final current = state;
     if (current is! ConvertLoaded) return;
 
-    final converted = current.rates.convert(
-      targetCurrency: newTargetCurrency,
+    final converted = current.rates.convertBetween(
+      fromCurrency: current.fromCurrency,
+      toCurrency: newTargetCurrency,
       amount: current.amount,
     );
 
@@ -101,12 +130,17 @@ class ConvertCubit extends Cubit<ConvertState> {
     );
   }
 
-  /// Saves the current currency pair to favorites.
+  /// Saves the currently displayed pair to favorites, storing the
+  /// live cross-rate for that specific pair.
   Future<void> saveCurrentPairToFavorites() async {
     final current = state;
     if (current is! ConvertLoaded) return;
 
-    final rate = current.rates.rates[current.toCurrency];
+    final rate = current.rates.convertBetween(
+      fromCurrency: current.fromCurrency,
+      toCurrency: current.toCurrency,
+      amount: 1,
+    );
     if (rate == null) return;
 
     final pair = FavoritePairModel.create(
