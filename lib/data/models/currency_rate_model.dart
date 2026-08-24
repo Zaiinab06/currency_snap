@@ -28,9 +28,18 @@ class CurrencyRateModel extends Equatable {
       rates: rawRates.map(
         (key, value) => MapEntry(key, (value as num).toDouble()),
       ),
-      // API gives a formatted string; when parsing live, "now" is accurate.
-      lastUpdated: DateTime.now(),
+      lastUpdated: _parseApiTimestamp(json['time_last_update_unix']),
     );
+  }
+
+  /// The API gives a Unix timestamp (seconds) for when rates were last
+  /// refreshed on their end — this is the real "last updated" time,
+  /// not the moment this device happened to fetch it.
+  static DateTime _parseApiTimestamp(dynamic unixSeconds) {
+    if (unixSeconds is int) {
+      return DateTime.fromMillisecondsSinceEpoch(unixSeconds * 1000);
+    }
+    return DateTime.now();
   }
 
   /// Build from a locally cached JSON blob (has its own stored timestamp).

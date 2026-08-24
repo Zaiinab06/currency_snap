@@ -5,7 +5,11 @@ import '../../../core/theme/app_colors.dart';
 /// Home/Converter screen. [isEditable] controls whether the amount
 /// field accepts input (the "send" side) or just displays a computed
 /// result (the "receive" side).
-class CurrencyInputCard extends StatelessWidget {
+///
+/// Stateful so it can own a persistent [TextEditingController] —
+/// recreating the controller on every rebuild would reset the
+/// cursor/typed text mid-keystroke, cutting off digits as the user types.
+class CurrencyInputCard extends StatefulWidget {
   final String label;
   final String currencyCode;
   final String amountText;
@@ -24,6 +28,25 @@ class CurrencyInputCard extends StatelessWidget {
   });
 
   @override
+  State<CurrencyInputCard> createState() => _CurrencyInputCardState();
+}
+
+class _CurrencyInputCardState extends State<CurrencyInputCard> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.amountText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -35,13 +58,14 @@ class CurrencyInputCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(widget.label, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: isEditable
+                child: widget.isEditable
                     ? TextField(
+                        controller: _controller,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
@@ -54,21 +78,20 @@ class CurrencyInputCard extends StatelessWidget {
                           contentPadding: EdgeInsets.zero,
                           isDense: true,
                         ),
-                        controller: TextEditingController(text: amountText)
-                          ..selection = TextSelection.collapsed(
-                            offset: amountText.length,
-                          ),
-                        onChanged: onAmountChanged,
+                        onChanged: widget.onAmountChanged,
                       )
                     : Text(
-                        amountText,
+                        widget.amountText,
                         style: Theme.of(
                           context,
                         ).textTheme.headlineMedium?.copyWith(fontSize: 26),
                       ),
               ),
               const SizedBox(width: 8),
-              _CurrencyPill(code: currencyCode, onTap: onCurrencyTap),
+              _CurrencyPill(
+                code: widget.currencyCode,
+                onTap: widget.onCurrencyTap,
+              ),
             ],
           ),
         ],

@@ -7,8 +7,10 @@ import '../../bottom_sheets/currency_picker_sheet.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/cache_timestamp_label.dart';
+import '../../widgets/common/rate_source_disclaimer.dart';
 import '../../widgets/home/currency_input_card.dart';
 import '../../widgets/home/swap_button.dart';
+import '../../widgets/home/unit_rate_label.dart';
 
 /// The app's main screen: amount input, currency selection, live
 /// conversion, and the offline-cache indicator.
@@ -83,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 children: [
                   CurrencyInputCard(
+                    key: ValueKey('send_${state.fromCurrency}'),
                     label: 'You send',
                     currencyCode: state.fromCurrency,
                     amountText: state.amount.toStringAsFixed(2),
@@ -113,6 +116,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          UnitRateLabel(
+            rates: state.rates,
+            fromCurrency: state.fromCurrency,
+            toCurrency: state.toCurrency,
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -136,6 +145,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          const RateSourceDisclaimer(),
         ],
       ),
     );
