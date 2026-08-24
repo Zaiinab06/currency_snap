@@ -4,19 +4,18 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const Color primary = Color(0xFF0057FF);
-  static const Color primaryDark = Color(0xFF0040C4);
-  static const Color primaryLight = Color(0xFF5C8DFF);
+  static const Color primary = Color(0xFF163300);
+  static const Color accent = Color(0xFF9FE870);
+  static const Color primaryDark = Color(0xFF0E2200);
+  static const Color primaryLight = Color(0xFF285600);
 
-  static const Color secondary = Color(0xFF0B0B0F);
-  static const Color tertiary = Color(0xFF717A7A);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceAlt = Color(0xFFF3F4F6);
+  static const Color background = Color(0xFFF4F5F7);
+  static const Color cardBorder = Color(0xFFE5E7EB);
+  static const Color border = Color(0xFFE5E7EB);
 
-  static const Color background = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFF6F7F9);
-  static const Color surfaceAlt = Color(0xFFEFF1F4);
-  static const Color border = Color(0xFFE3E6EA);
-
-  static const Color textPrimary = Color(0xFF0B0B0F);
+  static const Color textPrimary = Color(0xFF111827);
   static const Color textSecondary = Color(0xFF6B7280);
   static const Color textMuted = Color(0xFF9CA3AF);
 
@@ -25,4 +24,5 @@ class AppColors {
   static const Color warning = Color(0xFFD97706);
 
   static const Color onPrimary = Color(0xFFFFFFFF);
+  static const Color onAccent = Color(0xFF163300);
 }

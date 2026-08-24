@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../bloc/convert/convert_cubit.dart';
 import '../../../bloc/convert/convert_state.dart';
+import '../../../bloc/favorites/favorites_cubit.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../bottom_sheets/currency_picker_sheet.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_banner.dart';
-import '../../widgets/common/cache_timestamp_label.dart';
-import '../../widgets/common/rate_source_disclaimer.dart';
 import '../../widgets/home/currency_input_card.dart';
 import '../../widgets/home/swap_button.dart';
-import '../../widgets/home/unit_rate_label.dart';
+import '../historical_rates/historical_rate_chart_screen.dart';
 
-/// The app's main screen: amount input, currency selection, live
-/// conversion, and the offline-cache indicator.
+/// Main Stitch Converter Dashboard: amount input, live conversion,
+/// mid-market status badge, baseline rates, and quick action buttons.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -37,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final picked = await showCurrencyPickerSheet(
       context: context,
       selectedCode: currentCode,
+      availableCodes: state.rates.rates.keys,
     );
     if (picked == null || picked == currentCode) return;
 
@@ -50,7 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('CurrencySnap')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text(
+          'CurrencySnap',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
+        ),
+      ),
       body: SafeArea(
         child: BlocBuilder<ConvertCubit, ConvertState>(
           builder: (context, state) {
@@ -73,12 +79,49 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLoadedContent(BuildContext context, ConvertLoaded state) {
     final cubit = context.read<ConvertCubit>();
+    final unitRate = state.rates.convertBetween(
+          fromCurrency: state.fromCurrency,
+          toCurrency: state.toCurrency,
+          amount: 1.0,
+        ) ??
+        0.0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Live status badge
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('⚡', style: TextStyle(fontSize: 13)),
+                  const SizedBox(width: 6),
+                  Text(
+                    state.isFromCache
+                        ? 'Offline cache mode'
+                        : 'Live mid-market rate',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Converter Stack with overlapping center swap button
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -106,49 +149,116 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              // Swap button overlaps the seam between the two cards,
-              // centered horizontally, matching the approved design.
               Positioned(
-                top: 88, // half of card height minus half of button height
+                top: 86,
                 left: 0,
                 right: 0,
                 child: Center(child: SwapButton(onTap: cubit.swapCurrencies)),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          UnitRateLabel(
-            rates: state.rates,
-            fromCurrency: state.fromCurrency,
-            toCurrency: state.toCurrency,
-          ),
           const SizedBox(height: 16),
+
+          // Clean baseline rate label
+          Center(
+            child: Text(
+              '1 ${state.fromCurrency} = ${unitRate.toStringAsFixed(4)} ${state.toCurrency}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Action Buttons: Save to Watchlist & Track Historical Trend
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CacheTimestampLabel(
-                isFromCache: state.isFromCache,
-                lastUpdated: state.rates.lastUpdated,
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await cubit.saveCurrentPairToFavorites();
+                    if (context.mounted) {
+                      context.read<FavoritesCubit>().loadFavorites();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${state.fromCurrency}/${state.toCurrency} saved to favorites',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.star_border_rounded, size: 18),
+                  label: const Text('Save Pair'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    backgroundColor: AppColors.surface,
+                    side: const BorderSide(color: AppColors.cardBorder),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ),
-              TextButton.icon(
-                onPressed: () async {
-                  await cubit.saveCurrentPairToFavorites();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Pair saved to favorites')),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => HistoricalRateChartScreen(
+                          fromCurrency: state.fromCurrency,
+                          toCurrency: state.toCurrency,
+                          currentRate: unitRate,
+                        ),
+                      ),
                     );
-                  }
-                },
-                icon: const Icon(Icons.star_border_rounded, size: 18),
-                label: const Text('Save pair'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                  },
+                  icon: const Icon(
+                    Icons.trending_up_rounded,
+                    size: 18,
+                    color: AppColors.accent,
+                  ),
+                  label: const Text('Track Trend'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const RateSourceDisclaimer(),
+          const SizedBox(height: 24),
+
+          // Footer disclaimer micro-text
+          Text(
+            'Mid-market exchange rates provided for informational purposes only. Actual transaction rates may vary by institution.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  height: 1.4,
+                ),
+          ),
         ],
       ),
     );
   }
 }
+

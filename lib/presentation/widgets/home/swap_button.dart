@@ -10,22 +10,37 @@ class SwapButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.primary,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: const SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(
-            Icons.swap_vert_rounded,
-            color: AppColors.onPrimary,
-            size: 22,
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: AppColors.accent,
+        shape: const CircleBorder(
+          side: BorderSide(color: Colors.white, width: 3),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: const SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(
+              Icons.swap_vert_rounded,
+              color: AppColors.primary,
+              size: 24,
+            ),
           ),
         ),
       ),
     );
   }
 }
+

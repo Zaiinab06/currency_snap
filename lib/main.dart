@@ -8,7 +8,8 @@ import 'data/datasources/local/currency_cache_datasource.dart';
 import 'data/datasources/local/favorites_local_datasource.dart';
 import 'data/repositories/currency_repository.dart';
 import 'bloc/convert/convert_cubit.dart';
-import 'presentation/screens/home/home_screen.dart';
+import 'bloc/favorites/favorites_cubit.dart';
+import 'presentation/screens/splash/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,23 +25,23 @@ class CurrencySnapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repository = CurrencyRepository(
-      remoteDataSource: CurrencyRemoteDataSource(),
-      cacheDataSource: CurrencyCacheDataSource(prefs),
-      favoritesDataSource: FavoritesLocalDataSource(prefs),
+      CurrencyRemoteDataSource(),
+      CurrencyCacheDataSource(prefs),
+      FavoritesLocalDataSource(prefs),
     );
 
     return RepositoryProvider.value(
       value: repository,
-      child: BlocProvider(
-        create: (_) => ConvertCubit(repository),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => ConvertCubit(repository)),
+          BlocProvider(create: (_) => FavoritesCubit(repository)),
+        ],
         child: MaterialApp(
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          // TODO: swap back to SplashScreen -> HomeScreen navigation
-          // once app_router.dart is built. Going straight to Home for
-          // now so the Convert feature can be tested end-to-end.
-          home: const HomeScreen(),
+          home: const SplashScreen(),
         ),
       ),
     );

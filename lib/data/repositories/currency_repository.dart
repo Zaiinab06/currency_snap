@@ -22,13 +22,11 @@ class CurrencyRepository {
   final CurrencyCacheDataSource _cacheDataSource;
   final FavoritesLocalDataSource _favoritesDataSource;
 
-  CurrencyRepository({
-    required CurrencyRemoteDataSource remoteDataSource,
-    required CurrencyCacheDataSource cacheDataSource,
-    required FavoritesLocalDataSource favoritesDataSource,
-  }) : _remoteDataSource = remoteDataSource,
-       _cacheDataSource = cacheDataSource,
-       _favoritesDataSource = favoritesDataSource;
+  CurrencyRepository(
+    this._remoteDataSource,
+    this._cacheDataSource,
+    this._favoritesDataSource,
+  );
 
   Future<RateResult> getRates(String baseCurrency) async {
     try {
