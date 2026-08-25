@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// Line chart visualizing recent exchange rate trends.
+/// Line chart visualizing recent exchange rate trends with glowing Neon Purple styling.
 class RateChartWidget extends StatelessWidget {
   final String fromCurrency;
   final String toCurrency;
@@ -30,11 +30,33 @@ class RateChartWidget extends StatelessWidget {
     final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) * 1.005;
 
     return AspectRatio(
-      aspectRatio: 1.8,
+      aspectRatio: 1.75,
       child: LineChart(
         LineChartData(
           minY: minY,
           maxY: maxY,
+          lineTouchData: LineTouchData(
+            handleBuiltInTouches: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) => AppColors.surfaceElevated,
+              tooltipBorder: const BorderSide(color: AppColors.primaryLight, width: 1.2),
+              tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((spot) {
+                  return LineTooltipItem(
+                    spot.y > 100
+                        ? spot.y.toStringAsFixed(2)
+                        : spot.y.toStringAsFixed(4),
+                    const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  );
+                }).toList();
+              },
+            ),
+          ),
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
@@ -51,16 +73,18 @@ class RateChartWidget extends StatelessWidget {
             rightTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 46,
+                reservedSize: 52,
                 getTitlesWidget: (value, meta) {
                   return Padding(
-                    padding: const EdgeInsets.only(left: 6),
+                    padding: const EdgeInsets.only(left: 8),
                     child: Text(
-                      value.toStringAsFixed(2),
+                      value > 100
+                          ? value.toStringAsFixed(1)
+                          : value.toStringAsFixed(3),
                       style: const TextStyle(
                         fontSize: 10,
                         color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   );
@@ -75,12 +99,13 @@ class RateChartWidget extends StatelessWidget {
                   final index = value.toInt();
                   if (index >= 0 && index < days.length) {
                     return Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: 10),
                       child: Text(
                         days[index],
                         style: const TextStyle(
                           fontSize: 10,
                           color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     );
@@ -95,16 +120,34 @@ class RateChartWidget extends StatelessWidget {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: AppColors.primary,
-              barWidth: 2.5,
+              curveSmoothness: 0.35,
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryLight],
+              ),
+              shadow: const Shadow(
+                color: Color(0x996C5CE7),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+              barWidth: 3.2,
               isStrokeCapRound: true,
-              dotData: const FlDotData(show: false),
+              dotData: FlDotData(
+                show: true,
+                checkToShowDot: (spot, barData) => spot.x == (spots.length - 1).toDouble(),
+                getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                  radius: 5,
+                  color: AppColors.primaryLight,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                ),
+              ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.accent.withValues(alpha: 0.35),
-                    AppColors.accent.withValues(alpha: 0.0),
+                    AppColors.primary.withValues(alpha: 0.4),
+                    AppColors.primaryLight.withValues(alpha: 0.15),
+                    AppColors.background.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -117,3 +160,4 @@ class RateChartWidget extends StatelessWidget {
     );
   }
 }
+

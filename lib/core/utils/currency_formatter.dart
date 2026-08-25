@@ -5,13 +5,21 @@ class CurrencyFormatter {
   CurrencyFormatter._();
 
   /// Formats a numeric amount with standard thousands separators and decimal digits.
-  /// Example: 1000.5 -> "1,000.50"
+  /// Example: 1000.5 -> "1,000.50", 277774.76 -> "277,774.76"
   static String formatAmount(double amount, {int decimalDigits = 2}) {
     final formatter = NumberFormat.currency(
       symbol: '',
       decimalDigits: decimalDigits,
     );
     return formatter.format(amount).trim();
+  }
+
+  /// Formats an input amount cleanly with thousands separators (e.g. "1,000" for integers, "1,000.50" for decimals).
+  static String formatInputAmount(double amount) {
+    if (amount % 1 == 0) {
+      return NumberFormat('#,##0').format(amount);
+    }
+    return NumberFormat('#,##0.00').format(amount);
   }
 
   /// Formats an exchange rate with high precision (default 4 decimal places).

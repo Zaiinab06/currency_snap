@@ -10,10 +10,12 @@ class CurrencyCacheDataSource {
 
   CurrencyCacheDataSource(this._prefs);
 
-  /// Persists [rates] to local storage.
-  Future<void> saveRates(CurrencyRateModel rates) async {
+  /// Persists [rates] to local storage along with the sync timestamp.
+  Future<void> saveRates(CurrencyRateModel rates, {DateTime? syncTime}) async {
+    final now = syncTime ?? DateTime.now();
     final jsonString = jsonEncode(rates.toCacheJson());
     await _prefs.setString(AppConstants.cacheKeyRates, jsonString);
+    await _prefs.setString(AppConstants.cacheKeyTimestamp, now.toIso8601String());
   }
 
   /// Retrieves the cached exchange rates.
@@ -33,13 +35,21 @@ class CurrencyCacheDataSource {
     return CurrencyRateModel.fromCacheJson(json);
   }
 
+  /// Retrieves the last sync timestamp from local storage.
+  DateTime? getLastSyncTime() {
+    final timeStr = _prefs.getString(AppConstants.cacheKeyTimestamp);
+    if (timeStr == null) return null;
+    return DateTime.tryParse(timeStr);
+  }
+
   /// Returns true if cached exchange rates exist in local storage.
   bool hasCachedRates() {
     return _prefs.containsKey(AppConstants.cacheKeyRates);
   }
 
-  /// Clears all cached rates from local storage.
+  /// Clears all cached rates and timestamps from local storage.
   Future<void> clearCache() async {
     await _prefs.remove(AppConstants.cacheKeyRates);
+    await _prefs.remove(AppConstants.cacheKeyTimestamp);
   }
 }

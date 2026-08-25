@@ -198,7 +198,7 @@ Future<String?> showCurrencyPickerSheet({
     useSafeArea: true,
     backgroundColor: AppColors.background,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     builder: (context) => _CurrencyPickerContent(
       selectedCode: selectedCode,
@@ -222,7 +222,17 @@ class _CurrencyPickerContent extends StatefulWidget {
 
 class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
   String _query = '';
+  String _selectedLetter = 'ALL';
   late final List<CurrencyOption> _allOptions;
+
+  static const List<String> _recentCodes = [
+    'USD', 'EUR', 'GBP', 'PKR', 'INR', 'AED', 'SAR', 'CAD', 'JPY', 'AUD', 'CHF', 'CNY',
+  ];
+
+  static const List<String> _alphabet = [
+    'ALL', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  ];
 
   @override
   void initState() {
@@ -256,9 +266,13 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
   }
 
   List<CurrencyOption> get _filtered {
-    if (_query.trim().isEmpty) return _allOptions;
+    var list = _allOptions;
+    if (_selectedLetter != 'ALL') {
+      list = list.where((c) => c.code.toUpperCase().startsWith(_selectedLetter)).toList();
+    }
+    if (_query.trim().isEmpty) return list;
     final q = _query.trim().toLowerCase();
-    return _allOptions.where((c) {
+    return list.where((c) {
       return c.code.toLowerCase().contains(q) ||
           c.name.toLowerCase().contains(q) ||
           c.country.toLowerCase().contains(q);
@@ -271,31 +285,39 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
     final bottomInset = mediaQuery.viewInsets.bottom;
     final screenHeight = mediaQuery.size.height;
 
-    return SizedBox(
-      height: screenHeight * 0.85,
+    return Container(
+      height: screenHeight * 0.88,
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       child: Padding(
         padding: EdgeInsets.only(bottom: bottomInset),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 12),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 14, 16, 8),
               child: Row(
                 children: [
-                  Text(
+                  const Text(
                     'Select Currency',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
@@ -306,18 +328,173 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
                 ],
               ),
             ),
+
+            // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
                 autofocus: false,
                 onChanged: (v) => setState(() => _query = v),
-                decoration: const InputDecoration(
-                  hintText: 'Search code, currency, or country (e.g. SEK, Sweden)',
-                  prefixIcon: Icon(Icons.search_rounded, size: 20),
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Search code, currency, or country...',
+                  hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.textSecondary),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.cardBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.cardBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+
+            // Recent Currencies Row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: const [
+                  Icon(Icons.history_rounded, size: 14, color: AppColors.primaryLight),
+                  SizedBox(width: 6),
+                  Text(
+                    'RECENT',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                scrollDirection: Axis.horizontal,
+                itemCount: _recentCodes.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final code = _recentCodes[index];
+                  final countryCode = kCurrencyData[code]?.countryCode ??
+                      code.substring(0, code.length > 2 ? 2 : code.length);
+                  final isSelected = code == widget.selectedCode;
+
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Navigator.of(context).pop(code),
+                      borderRadius: BorderRadius.circular(19),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.25)
+                              : AppColors.surface,
+                          borderRadius: BorderRadius.circular(19),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : AppColors.cardBorder,
+                            width: isSelected ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.borderHighlight, width: 0.8),
+                              ),
+                              child: ClipOval(
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: FlagCode.fromCurrencyCode(code) != null
+                                      ? CountryFlag.fromCurrencyCode(
+                                          code,
+                                          shape: const Circle(),
+                                        )
+                                      : CountryFlag.fromCountryCode(
+                                          countryCode,
+                                          shape: const Circle(),
+                                        ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              code,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected ? AppColors.primaryLight : AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // A-Z Jump Bar
+            SizedBox(
+              height: 28,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                scrollDirection: Axis.horizontal,
+                itemCount: _alphabet.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 4),
+                itemBuilder: (context, index) {
+                  final letter = _alphabet[index];
+                  final isSelected = _selectedLetter == letter;
+
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedLetter = letter;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        letter,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Main Currency Grid
             Expanded(
               child: _filtered.isEmpty
                   ? Center(
@@ -325,7 +502,7 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
                         padding: const EdgeInsets.all(32),
                         child: Text(
                           'No currencies found matching "$_query"',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          style: const TextStyle(color: AppColors.textSecondary),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -353,15 +530,24 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? AppColors.accent.withValues(alpha: 0.18)
+                                    ? AppColors.primary.withValues(alpha: 0.2)
                                     : AppColors.surface,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: isSelected
-                                      ? AppColors.primary
+                                      ? AppColors.primaryLight
                                       : AppColors.cardBorder,
                                   width: isSelected ? 1.8 : 1.0,
                                 ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: AppColors.primary.withValues(alpha: 0.25),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,33 +560,46 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
                                         children: [
                                           Text(
                                             option.code,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.w700,
-                                                  color: isSelected
-                                                      ? AppColors.primary
-                                                      : AppColors.textPrimary,
-                                                ),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 16,
+                                              letterSpacing: -0.2,
+                                              color: isSelected
+                                                  ? AppColors.primaryLight
+                                                  : AppColors.textPrimary,
+                                            ),
                                           ),
                                           if (isSelected) ...[
                                             const SizedBox(width: 4),
                                             const Icon(
                                               Icons.check_circle_rounded,
                                               size: 14,
-                                              color: AppColors.primary,
+                                              color: AppColors.primaryLight,
                                             ),
                                           ],
                                         ],
                                       ),
-                                      ClipOval(
-                                        child: SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CountryFlag.fromCountryCode(
-                                            option.countryCode,
-                                            shape: const Circle(),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: AppColors.borderHighlight,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: ClipOval(
+                                          child: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: FlagCode.fromCurrencyCode(option.code) != null
+                                                ? CountryFlag.fromCurrencyCode(
+                                                    option.code,
+                                                    shape: const Circle(),
+                                                  )
+                                                : CountryFlag.fromCountryCode(
+                                                    option.countryCode,
+                                                    shape: const Circle(),
+                                                  ),
                                           ),
                                         ),
                                       ),
@@ -413,26 +612,21 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
                                         option.name,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 12,
-                                              color: AppColors.textPrimary,
-                                            ),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 12,
+                                          color: AppColors.textPrimary,
+                                        ),
                                       ),
+                                      const SizedBox(height: 1),
                                       Text(
                                         option.country,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(
-                                              fontSize: 10,
-                                              color: AppColors.textSecondary,
-                                            ),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -451,5 +645,6 @@ class _CurrencyPickerContentState extends State<_CurrencyPickerContent> {
     );
   }
 }
+
 
 

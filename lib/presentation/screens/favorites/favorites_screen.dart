@@ -7,7 +7,7 @@ import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/favorites/favorite_pair_tile.dart';
 
-/// Screen displaying and managing the user's saved favorite currency pairs.
+/// Screen displaying and managing the user's saved favorite currency pairs in Midnight Neon theme.
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
@@ -27,7 +27,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Favorites'),
+        backgroundColor: AppColors.background,
+        title: const Text(
+          'Favorite Pairs',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
+        ),
       ),
       body: SafeArea(
         child: BlocBuilder<FavoritesCubit, FavoritesState>(
@@ -49,7 +53,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
             return RefreshIndicator(
               onRefresh: () => context.read<FavoritesCubit>().loadFavorites(),
-              color: AppColors.primary,
+              color: AppColors.primaryLight,
+              backgroundColor: AppColors.surface,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 itemCount: state.favorites.length,
@@ -86,28 +91,37 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceAlt,
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.cardBorder),
               ),
               child: const Icon(
                 Icons.star_border_rounded,
-                color: AppColors.textMuted,
-                size: 36,
+                color: AppColors.primaryLight,
+                size: 38,
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No favorites saved yet',
-              style: Theme.of(context).textTheme.titleMedium,
+            const SizedBox(height: 18),
+            const Text(
+              'No favorite pairs saved',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Save your most converted currency pairs from the Home screen for quick access.',
+            const SizedBox(height: 8),
+            const Text(
+              'Save your most converted currency pairs from the Home screen for instant tracking.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -115,3 +129,4 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 }
+

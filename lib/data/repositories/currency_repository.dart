@@ -7,13 +7,17 @@ import '../datasources/local/favorites_local_datasource.dart';
 import '../../core/errors/app_exceptions.dart';
 
 /// Wraps a rate result together with whether it came from the network
-/// or from local cache. The UI/Cubit uses [isFromCache] to decide
-/// whether to show the "last updated" offline indicator.
+/// or from local cache, along with the device sync timestamp.
 class RateResult {
   final CurrencyRateModel rates;
   final bool isFromCache;
+  final DateTime syncTime;
 
-  const RateResult({required this.rates, required this.isFromCache});
+  const RateResult({
+    required this.rates,
+    required this.isFromCache,
+    required this.syncTime,
+  });
 }
 
 /// Single source of truth for currency rate data.
@@ -28,15 +32,25 @@ class CurrencyRepository {
     this._favoritesDataSource,
   );
 
-  Future<RateResult> getRates(String baseCurrency) async {
+  Future<RateResult> getRates(String baseCurrency, {bool forceRefresh = false}) async {
     try {
       final freshRates = await _remoteDataSource.getLatestRates(baseCurrency);
-      await _cacheDataSource.saveRates(freshRates);
-      return RateResult(rates: freshRates, isFromCache: false);
+      final syncTime = DateTime.now();
+      await _cacheDataSource.saveRates(freshRates, syncTime: syncTime);
+      return RateResult(
+        rates: freshRates,
+        isFromCache: false,
+        syncTime: syncTime,
+      );
     } on NetworkException {
       try {
         final cachedRates = await _cacheDataSource.getCachedRates();
-        return RateResult(rates: cachedRates, isFromCache: true);
+        final syncTime = _cacheDataSource.getLastSyncTime() ?? cachedRates.lastUpdated;
+        return RateResult(
+          rates: cachedRates,
+          isFromCache: true,
+          syncTime: syncTime,
+        );
       } on NoCachedDataException {
         rethrow;
       }

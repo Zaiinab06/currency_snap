@@ -27,15 +27,22 @@ class ConvertLoaded extends ConvertState {
   final String toCurrency;
   final double amount;
   final double? convertedAmount;
+  final bool isRefreshing;
+  final DateTime lastSyncTime;
 
-  const ConvertLoaded({
+  DateTime get lastUpdated => lastSyncTime;
+
+  ConvertLoaded({
     required this.rates,
     required this.isFromCache,
     required this.fromCurrency,
     required this.toCurrency,
     required this.amount,
     required this.convertedAmount,
-  });
+    this.isRefreshing = false,
+    DateTime? lastSyncTime,
+    DateTime? lastUpdated,
+  }) : lastSyncTime = lastSyncTime ?? lastUpdated ?? rates.lastUpdated;
 
   /// The direct exchange rate from [fromCurrency] to [toCurrency].
   double? get currentRate => rates.rates[toCurrency];
@@ -47,6 +54,9 @@ class ConvertLoaded extends ConvertState {
     String? toCurrency,
     double? amount,
     double? convertedAmount,
+    bool? isRefreshing,
+    DateTime? lastSyncTime,
+    DateTime? lastUpdated,
   }) {
     return ConvertLoaded(
       rates: rates ?? this.rates,
@@ -55,6 +65,8 @@ class ConvertLoaded extends ConvertState {
       toCurrency: toCurrency ?? this.toCurrency,
       amount: amount ?? this.amount,
       convertedAmount: convertedAmount ?? this.convertedAmount,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+      lastSyncTime: lastSyncTime ?? lastUpdated ?? this.lastSyncTime,
     );
   }
 
@@ -66,6 +78,8 @@ class ConvertLoaded extends ConvertState {
     toCurrency,
     amount,
     convertedAmount,
+    isRefreshing,
+    lastSyncTime,
   ];
 }
 

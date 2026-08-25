@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../widgets/historical_rates/rate_chart_widget.dart';
 
-/// Screen displaying interactive 7-day rate trend and high/low stats.
+/// Screen displaying interactive 7-day rate trend and high/low stats in Midnight Neon Purple theme.
 class HistoricalRateChartScreen extends StatelessWidget {
   final String fromCurrency;
   final String toCurrency;
@@ -20,7 +20,11 @@ class HistoricalRateChartScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('$fromCurrency to $toCurrency Trend'),
+        backgroundColor: AppColors.background,
+        title: Text(
+          '$fromCurrency to $toCurrency Trend',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: SafeArea(
         child: ListView(
@@ -32,6 +36,13 @@ class HistoricalRateChartScreen extends StatelessWidget {
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: AppColors.cardBorder),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,20 +53,23 @@ class HistoricalRateChartScreen extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Current Rate',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '1 $fromCurrency = ${currentRate.toStringAsFixed(4)} $toCurrency',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            '1 $fromCurrency = ${currentRate > 100 ? currentRate.toStringAsFixed(2) : currentRate.toStringAsFixed(4)} $toCurrency',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.4,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -65,7 +79,7 @@ class HistoricalRateChartScreen extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.2),
+                          color: AppColors.deltaPositive.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
@@ -74,7 +88,7 @@ class HistoricalRateChartScreen extends StatelessWidget {
                             Icon(
                               Icons.trending_up_rounded,
                               size: 16,
-                              color: AppColors.primary,
+                              color: AppColors.deltaPositive,
                             ),
                             SizedBox(width: 4),
                             Text(
@@ -82,7 +96,7 @@ class HistoricalRateChartScreen extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                                color: AppColors.deltaPositive,
                               ),
                             ),
                           ],
@@ -106,7 +120,8 @@ class HistoricalRateChartScreen extends StatelessWidget {
                   child: _buildMetricCard(
                     context,
                     '7D High',
-                    (currentRate * 1.008).toStringAsFixed(4),
+                    (currentRate * 1.008).toStringAsFixed(currentRate > 100 ? 2 : 4),
+                    AppColors.deltaPositive,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -114,7 +129,8 @@ class HistoricalRateChartScreen extends StatelessWidget {
                   child: _buildMetricCard(
                     context,
                     '7D Low',
-                    (currentRate * 0.985).toStringAsFixed(4),
+                    (currentRate * 0.985).toStringAsFixed(currentRate > 100 ? 2 : 4),
+                    AppColors.deltaNegative,
                   ),
                 ),
               ],
@@ -125,28 +141,58 @@ class HistoricalRateChartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricCard(BuildContext context, String label, String value) {
+  Widget _buildMetricCard(BuildContext context, String label, String value, Color accentColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              letterSpacing: -0.2,
+              color: AppColors.textPrimary,
+            ),
           ),
         ],
       ),
     );
   }
 }
+

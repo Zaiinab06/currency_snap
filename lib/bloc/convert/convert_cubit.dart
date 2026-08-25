@@ -20,17 +20,41 @@ class ConvertCubit extends Cubit<ConvertState> {
 
   ConvertCubit(this._repository) : super(const ConvertInitial());
 
+  /// Refreshes exchange rates by triggering a fresh network call,
+  /// animating the refresh indicator and updating the sync timestamp.
+  Future<void> refreshRates({bool forceRefresh = true}) async {
+    final current = state;
+    if (current is ConvertLoaded) {
+      await loadRates(
+        fromCurrency: current.fromCurrency,
+        toCurrency: current.toCurrency,
+        amount: current.amount,
+        forceRefresh: forceRefresh,
+      );
+    } else {
+      await loadRates(forceRefresh: forceRefresh);
+    }
+  }
+
   /// Fetches the anchor rate table once (live, falling back to cache
   /// on failure) and sets up the initial from/to pair.
   Future<void> loadRates({
     String fromCurrency = AppConstants.defaultBaseCurrency,
     String toCurrency = AppConstants.defaultTargetCurrency,
     double amount = 100,
+    bool forceRefresh = false,
   }) async {
-    emit(const ConvertLoading());
+    final current = state;
+    if (current is ConvertLoaded) {
+      emit(current.copyWith(isRefreshing: true));
+    } else {
+      emit(const ConvertLoading());
+    }
+
     try {
       final result = await _repository.getRates(
         AppConstants.defaultBaseCurrency,
+        forceRefresh: forceRefresh,
       );
       final converted = result.rates.convertBetween(
         fromCurrency: fromCurrency,
@@ -46,12 +70,14 @@ class ConvertCubit extends Cubit<ConvertState> {
           toCurrency: toCurrency,
           amount: amount,
           convertedAmount: converted,
+          isRefreshing: false,
+          lastSyncTime: result.syncTime,
         ),
       );
     } on NoCachedDataException catch (e) {
       emit(ConvertError(e.message));
     } catch (e) {
-      emit(ConvertError('Something went wrong. Please try again.'));
+      emit(const ConvertError('Something went wrong. Please try again.'));
     }
   }
 

@@ -23,34 +23,46 @@ class CurrencyRateModel extends Equatable {
   /// Build from the raw API JSON response.
   factory CurrencyRateModel.fromJson(Map<String, dynamic> json) {
     final rawRates = json['rates'] as Map<String, dynamic>? ?? {};
+    DateTime timestamp;
+    if (json.containsKey('time_last_update_unix')) {
+      final unixSeconds = json['time_last_update_unix'] as num?;
+      if (unixSeconds != null) {
+        timestamp = DateTime.fromMillisecondsSinceEpoch(
+          unixSeconds.toInt() * 1000,
+          isUtc: true,
+        ).toLocal();
+      } else {
+        timestamp = DateTime.now();
+      }
+    } else if (json.containsKey('lastUpdated')) {
+      timestamp = DateTime.tryParse(json['lastUpdated'] as String) ?? DateTime.now();
+    } else {
+      timestamp = DateTime.now();
+    }
+
     return CurrencyRateModel(
-      baseCurrency: json['base_code'] as String? ?? 'USD',
+      baseCurrency: json['base_code'] as String? ?? json['baseCurrency'] as String? ?? 'USD',
       rates: rawRates.map(
         (key, value) => MapEntry(key, (value as num).toDouble()),
       ),
-      lastUpdated: _parseApiTimestamp(json['time_last_update_unix']),
+      lastUpdated: timestamp,
     );
-  }
-
-  /// The API gives a Unix timestamp (seconds) for when rates were last
-  /// refreshed on their end — this is the real "last updated" time,
-  /// not the moment this device happened to fetch it.
-  static DateTime _parseApiTimestamp(dynamic unixSeconds) {
-    if (unixSeconds is int) {
-      return DateTime.fromMillisecondsSinceEpoch(unixSeconds * 1000);
-    }
-    return DateTime.now();
   }
 
   /// Build from a locally cached JSON blob (has its own stored timestamp).
   factory CurrencyRateModel.fromCacheJson(Map<String, dynamic> json) {
     final rawRates = json['rates'] as Map<String, dynamic>? ?? {};
+    final lastUpdatedStr = json['lastUpdated'] as String?;
+    final lastUpdated = lastUpdatedStr != null
+        ? (DateTime.tryParse(lastUpdatedStr) ?? DateTime.now())
+        : DateTime.now();
+
     return CurrencyRateModel(
-      baseCurrency: json['baseCurrency'] as String? ?? 'USD',
+      baseCurrency: json['baseCurrency'] as String? ?? json['base_code'] as String? ?? 'USD',
       rates: rawRates.map(
         (key, value) => MapEntry(key, (value as num).toDouble()),
       ),
-      lastUpdated: DateTime.parse(json['lastUpdated'] as String),
+      lastUpdated: lastUpdated,
     );
   }
 

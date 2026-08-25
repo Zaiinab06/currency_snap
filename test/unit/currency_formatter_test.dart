@@ -10,6 +10,13 @@ void main() {
       expect(formatAmount(50.5, decimalDigits: 3), '50.500');
     });
 
+    test('formatInputAmount formats whole and decimal inputs correctly', () {
+      expect(CurrencyFormatter.formatInputAmount(100), '100');
+      expect(CurrencyFormatter.formatInputAmount(1000), '1,000');
+      expect(CurrencyFormatter.formatInputAmount(5000), '5,000');
+      expect(CurrencyFormatter.formatInputAmount(277774.76), '277,774.76');
+    });
+
     test('formatRate formats exchange rates with 4 decimal places by default', () {
       expect(formatRate(75.5640), '75.5640');
       expect(formatRate(1.12), '1.1200');
