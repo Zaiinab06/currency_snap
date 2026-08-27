@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../navigation/app_bottom_nav.dart';
 
-/// Splash screen displaying Midnight Neon Purple brand styling and navigating to main after 2s.
+/// Splash screen displaying brand styling and navigating to main after 1.6s.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -18,16 +18,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 2), () {
+    _timer = Timer(const Duration(milliseconds: 1600), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const AppBottomNav(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) =>
-                    FadeTransition(opacity: animation, child: child),
-            transitionDuration: const Duration(milliseconds: 300),
+          CupertinoPageRoute(
+            builder: (_) => const AppBottomNav(),
           ),
         );
       }
@@ -42,74 +37,82 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Background: Deep Midnight color #0B0C1E
+    const backgroundColor = Color(0xFF0B0C1E);
+    // Primary accent purple
+    const primaryColor = Color(0xFF6C5CE7);
+    // Soft muted indigo for tagline
+    const taglineColor = Color(0xFF8E8EA9);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Logo container matching home navigation icon
               Container(
-                width: 92,
-                height: 92,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 30,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+                  shape: BoxShape.circle,
+                  color: primaryColor.withValues(alpha: 0.15),
+                  border: Border.all(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
                 ),
                 child: Center(
                   child: Container(
-                    width: 54,
-                    height: 54,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: primaryColor,
                       gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.primaryLight],
+                        colors: [Color(0xFF6C5CE7), Color(0xFF8B5CF6)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.4),
+                          color: primaryColor.withValues(alpha: 0.4),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: const Icon(
-                      Icons.currency_exchange_rounded,
+                      CupertinoIcons.arrow_right_arrow_left,
                       color: Colors.white,
-                      size: 28,
+                      size: 24,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
-              Text(
+              const SizedBox(height: 24),
+              // App Title: "CurrencySnap" (Bold white, 26sp)
+              const Text(
                 AppConstants.appName,
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.5,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: -0.4,
                 ),
               ),
               const SizedBox(height: 8),
+              // Tagline: "Real-time rates, offline ready" (Muted soft indigo #8E8EA9, 14sp)
               Text(
-                'Real-time rates · Neon fast',
-                style: TextStyle(
+                'Real-time rates, offline ready',
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.2,
+                  color: taglineColor,
+                  letterSpacing: 0.1,
                 ),
               ),
             ],
@@ -119,4 +122,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

@@ -1,4 +1,5 @@
 import 'package:country_flags/country_flags.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -67,11 +68,18 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     final isDark = widget.isDark;
-    final cardBg = isDark ? theme.colorScheme.surfaceContainerHighest : theme.cardColor;
-    final cardBorder = isDark ? theme.colorScheme.outlineVariant : theme.dividerColor;
-    const labelColor = AppColors.textSecondary;
-    const amountColor = AppColors.textPrimary;
+    
+    // In Light Mode: Solid #FFFFFF card, in Dark Mode: midnight surfaces
+    final cardBg = isLight
+        ? Colors.white
+        : (isDark ? theme.colorScheme.surfaceContainerHighest : theme.cardColor);
+    final cardBorder = isLight
+        ? Colors.black.withValues(alpha: 0.06)
+        : (isDark ? theme.colorScheme.outlineVariant : theme.dividerColor);
+    final labelColor = isLight ? const Color(0xFF64748B) : theme.colorScheme.onSurfaceVariant;
+    final amountColor = theme.colorScheme.onSurface;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -79,24 +87,32 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
         color: cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: cardBorder, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: isLight
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             widget.label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: labelColor,
-                  fontSize: 13,
-                ),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: labelColor,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -109,7 +125,7 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.8,
@@ -134,7 +150,7 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
                       )
                     : Text(
                         widget.amountText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.8,
@@ -174,14 +190,17 @@ class _CurrencyPill extends StatelessWidget {
     final countryCode = kCurrencyData[code]?.countryCode ??
         code.substring(0, code.length > 2 ? 2 : code.length);
 
-    final pillBg = isDark
-        ? theme.colorScheme.surfaceContainerHighest
-        : theme.cardColor;
-    final pillBorder = isDark
-        ? theme.colorScheme.primary.withValues(alpha: 0.3)
-        : theme.dividerColor;
-    const textColor = AppColors.textPrimary;
-    const arrowColor = AppColors.textSecondary;
+    final isLight = theme.brightness == Brightness.light;
+    final pillBg = isLight
+        ? const Color(0xFFF1F3F9)
+        : (isDark ? theme.colorScheme.surfaceContainerHighest : theme.cardColor);
+    final pillBorder = isLight
+        ? Colors.black.withValues(alpha: 0.06)
+        : (isDark
+            ? theme.colorScheme.primary.withValues(alpha: 0.3)
+            : theme.dividerColor);
+    final textColor = theme.colorScheme.onSurface;
+    final arrowColor = isLight ? const Color(0xFF64748B) : theme.colorScheme.onSurfaceVariant;
 
     return Material(
       color: Colors.transparent,
@@ -196,7 +215,7 @@ class _CurrencyPill extends StatelessWidget {
             border: Border.all(color: pillBorder, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: Colors.black.withValues(alpha: isLight ? 0.03 : (isDark ? 0.15 : 0.05)),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -229,7 +248,7 @@ class _CurrencyPill extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 code,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                   letterSpacing: -0.3,
@@ -237,9 +256,9 @@ class _CurrencyPill extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 18,
+              Icon(
+                CupertinoIcons.chevron_down,
+                size: 14,
                 color: arrowColor,
               ),
             ],

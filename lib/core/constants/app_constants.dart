@@ -9,7 +9,9 @@ class AppConstants {
   static const String cacheKeyTimestamp = 'cached_rates_timestamp';
   static const String cacheKeyBaseCurrency = 'cached_base_currency';
   static const String prefKeyFavorites = 'favorite_pairs';
+  static const String prefKeyHistory = 'conversion_history';
   static const String prefKeyDefaultCurrency = 'default_currency';
+  static const String prefKeyDefaultTargetCurrency = 'default_target_currency';
   static const String prefKeyThemeMode = 'theme_mode';
 
   static const String defaultBaseCurrency = 'USD';

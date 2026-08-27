@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// The floating centered circular swap button with rotation animation,
 /// dynamic theme styling, and comfortable 48x48 tap target.
@@ -34,6 +36,7 @@ class _SwapButtonState extends State<SwapButton> with SingleTickerProviderStateM
   }
 
   void _handleTap() {
+    HapticFeedback.lightImpact();
     if (_controller.status == AnimationStatus.completed) {
       _controller.reverse();
     } else {
@@ -89,9 +92,9 @@ class _SwapButtonState extends State<SwapButton> with SingleTickerProviderStateM
               child: RotationTransition(
                 turns: _animation,
                 child: const Icon(
-                  Icons.swap_vert_rounded,
+                  CupertinoIcons.arrow_up_arrow_down,
                   color: Colors.white,
-                  size: 26,
+                  size: 22,
                 ),
               ),
             ),

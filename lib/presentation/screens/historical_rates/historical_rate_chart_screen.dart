@@ -1,8 +1,9 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../widgets/historical_rates/rate_chart_widget.dart';
 
-/// Screen displaying interactive 7-day rate trend and high/low stats in Midnight Neon Purple theme.
+/// Screen displaying interactive 7-day rate trend and high/low stats with dynamic theme reactivity.
 class HistoricalRateChartScreen extends StatelessWidget {
   final String fromCurrency;
   final String toCurrency;
@@ -17,32 +18,59 @@ class HistoricalRateChartScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final scaffoldBg = theme.scaffoldBackgroundColor;
+    final surfaceColor = isLight ? Colors.white : theme.cardColor;
+    final borderColor = isLight
+        ? Colors.black.withValues(alpha: 0.06)
+        : theme.dividerColor;
+    final labelMutedColor = isLight
+        ? const Color(0xFF64748B)
+        : theme.colorScheme.onSurfaceVariant;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: scaffoldBg,
+        leading: IconButton(
+          icon: const Icon(CupertinoIcons.chevron_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         title: Text(
           '$fromCurrency to $toCurrency Trend',
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurface,
+          ),
         ),
       ),
       body: SafeArea(
         child: ListView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: [
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: surfaceColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.cardBorder),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: isLight
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,22 +81,22 @@ class HistoricalRateChartScreen extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Current Rate',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.textSecondary,
+                              color: labelMutedColor,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '1 $fromCurrency = ${currentRate > 100 ? currentRate.toStringAsFixed(2) : currentRate.toStringAsFixed(4)} $toCurrency',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.4,
-                              color: AppColors.textPrimary,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -86,7 +114,7 @@ class HistoricalRateChartScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.trending_up_rounded,
+                              CupertinoIcons.arrow_up_right,
                               size: 16,
                               color: AppColors.deltaPositive,
                             ),
@@ -142,19 +170,37 @@ class HistoricalRateChartScreen extends StatelessWidget {
   }
 
   Widget _buildMetricCard(BuildContext context, String label, String value, Color accentColor) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final surfaceColor = isLight ? Colors.white : theme.cardColor;
+    final borderColor = isLight
+        ? Colors.black.withValues(alpha: 0.06)
+        : theme.dividerColor;
+    final labelMutedColor = isLight
+        ? const Color(0xFF64748B)
+        : theme.colorScheme.onSurfaceVariant;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: isLight
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,10 +210,10 @@ class HistoricalRateChartScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
+                  color: labelMutedColor,
                 ),
               ),
               Container(
@@ -183,11 +229,11 @@ class HistoricalRateChartScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 16,
               letterSpacing: -0.2,
-              color: AppColors.textPrimary,
+              color: theme.colorScheme.onSurface,
             ),
           ),
         ],
@@ -195,4 +241,3 @@ class HistoricalRateChartScreen extends StatelessWidget {
     );
   }
 }
-

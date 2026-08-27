@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 /// Utility class providing standardized number, currency, and rate formatting.
@@ -44,6 +45,98 @@ class CurrencyFormatter {
     if (text.trim().isEmpty) return 0.0;
     final cleaned = text.replaceAll(RegExp(r'[^\d.-]'), '');
     return double.tryParse(cleaned) ?? 0.0;
+  }
+}
+
+/// Dynamic input formatter that formats integer portions with commas as thousands separators
+/// while accurately tracking cursor position and permitting decimal entries.
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  final int maxDecimalDigits;
+
+  ThousandsSeparatorInputFormatter({this.maxDecimalDigits = 4});
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    // Filter out invalid characters, allowing only digits and at most one decimal point
+    final textWithoutCommas = newValue.text.replaceAll(',', '');
+
+    // Allow typing leading or solitary decimal point or digits
+    if (!RegExp(r'^\d*\.?\d*$').hasMatch(textWithoutCommas)) {
+      return oldValue;
+    }
+
+    // Count how many non-comma characters (digits + '.') were before the new cursor in newValue
+    int nonCommaCharsBeforeCursor = 0;
+    for (int i = 0; i < newValue.selection.end && i < newValue.text.length; i++) {
+      if (newValue.text[i] != ',') {
+        nonCommaCharsBeforeCursor++;
+      }
+    }
+
+    // Split integer and decimal parts
+    final parts = textWithoutCommas.split('.');
+    String integerPart = parts[0];
+    String? decimalPart = parts.length > 1 ? parts[1] : null;
+
+    if (decimalPart != null && decimalPart.length > maxDecimalDigits) {
+      decimalPart = decimalPart.substring(0, maxDecimalDigits);
+    }
+
+    // Format integer part with thousands commas
+    String formattedInteger = '';
+    if (integerPart.isNotEmpty) {
+      // Strip leading zeroes for multi-digit integers (e.g., '05' -> '5')
+      if (integerPart.length > 1 && integerPart.startsWith('0')) {
+        integerPart = integerPart.replaceFirst(RegExp(r'^0+'), '');
+        if (integerPart.isEmpty) integerPart = '0';
+      }
+
+      final intBuffer = StringBuffer();
+      for (int i = 0; i < integerPart.length; i++) {
+        if (i > 0 && (integerPart.length - i) % 3 == 0) {
+          intBuffer.write(',');
+        }
+        intBuffer.write(integerPart[i]);
+      }
+      formattedInteger = intBuffer.toString();
+    } else if (textWithoutCommas.startsWith('.')) {
+      formattedInteger = '0';
+    }
+
+    String formattedText = formattedInteger;
+    if (parts.length > 1) {
+      formattedText += '.$decimalPart';
+    } else if (textWithoutCommas.endsWith('.')) {
+      formattedText += '.';
+    }
+
+    // Calculate new cursor position based on nonCommaCharsBeforeCursor
+    int newCursorPos = 0;
+    int countedNonComma = 0;
+    for (int i = 0; i < formattedText.length; i++) {
+      if (countedNonComma == nonCommaCharsBeforeCursor) {
+        newCursorPos = i;
+        break;
+      }
+      if (formattedText[i] != ',') {
+        countedNonComma++;
+      }
+      newCursorPos = i + 1;
+    }
+
+    newCursorPos = newCursorPos.clamp(0, formattedText.length);
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: newCursorPos),
+    );
   }
 }
 

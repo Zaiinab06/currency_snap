@@ -1,5 +1,7 @@
 import 'package:country_flags/country_flags.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../bloc/convert/convert_cubit.dart';
 import '../../../bloc/convert/convert_state.dart';
@@ -7,17 +9,26 @@ import '../../../core/theme/app_colors.dart';
 import '../../bottom_sheets/currency_picker_sheet.dart';
 import '../../widgets/historical_rates/rate_chart_widget.dart';
 
-/// Screen displaying comprehensive exchange rates, interactive charts, and analytics in Midnight Neon theme.
+/// Screen displaying comprehensive exchange rates, interactive charts, and analytics with dynamic theme reactivity.
 class RatesScreen extends StatefulWidget {
-  const RatesScreen({super.key});
+  final String? initialFromCurrency;
+  final String? initialToCurrency;
+
+  const RatesScreen({
+    super.key,
+    this.initialFromCurrency,
+    this.initialToCurrency,
+  });
 
   @override
   State<RatesScreen> createState() => _RatesScreenState();
 }
 
 class _RatesScreenState extends State<RatesScreen> {
-  String _selectedFrom = 'USD';
-  String _selectedTo = 'EUR';
+  String? _selectedFrom;
+  String? _selectedTo;
+  String? _lastConvertCubitFrom;
+  String? _lastConvertCubitTo;
   int _selectedTimeframeIndex = 1; // 0: 24H, 1: 7D, 2: 1M, 3: 1Y
 
   final List<String> _timeframes = const ['24H', '7D', '1M', '1Y'];
@@ -31,8 +42,34 @@ class _RatesScreenState extends State<RatesScreen> {
     ('AUD', 'USD'),
   ];
 
-  void _pickCurrency({required bool isSource, required Set<String> availableCodes}) async {
-    final currentCode = isSource ? _selectedFrom : _selectedTo;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialFromCurrency != null && widget.initialToCurrency != null) {
+      _selectedFrom = widget.initialFromCurrency;
+      _selectedTo = widget.initialToCurrency;
+      _lastConvertCubitFrom = widget.initialFromCurrency;
+      _lastConvertCubitTo = widget.initialToCurrency;
+    } else {
+      final convertState = context.read<ConvertCubit>().state;
+      if (convertState is ConvertLoaded) {
+        _selectedFrom = convertState.fromCurrency;
+        _selectedTo = convertState.toCurrency;
+        _lastConvertCubitFrom = convertState.fromCurrency;
+        _lastConvertCubitTo = convertState.toCurrency;
+      } else {
+        _selectedFrom = 'USD';
+        _selectedTo = 'EUR';
+      }
+    }
+  }
+
+  void _pickCurrency({
+    required bool isSource,
+    required Set<String> availableCodes,
+  }) async {
+    final currentCode = (isSource ? _selectedFrom : _selectedTo) ??
+        (isSource ? 'USD' : 'EUR');
     final picked = await showCurrencyPickerSheet(
       context: context,
       selectedCode: currentCode,
@@ -57,43 +94,118 @@ class _RatesScreenState extends State<RatesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final scaffoldBg = theme.scaffoldBackgroundColor;
+    final surfaceColor = isLight ? Colors.white : theme.cardColor;
+    final surfaceAlt = theme.colorScheme.surfaceContainerHighest;
+    final primaryColor = theme.colorScheme.primary;
+    final primaryLightColor = theme.colorScheme.secondary;
+    final borderColor = isLight
+        ? Colors.black.withValues(alpha: 0.06)
+        : theme.dividerColor;
+    final labelMutedColor = isLight
+        ? const Color(0xFF64748B)
+        : theme.colorScheme.onSurfaceVariant;
+
+    final canPop = Navigator.of(context).canPop();
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: scaffoldBg,
         elevation: 0,
-        title: const Text(
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(CupertinoIcons.chevron_back),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
+        title: Text(
           'Rates & Analytics',
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 20,
             letterSpacing: -0.4,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ),
-      body: BlocBuilder<ConvertCubit, ConvertState>(
+      body: BlocConsumer<ConvertCubit, ConvertState>(
+        listener: (context, state) {
+          if (state is ConvertLoaded) {
+            // When ConvertCubit pair updates (e.g. from HomeScreen selections),
+            // automatically synchronize the RatesScreen active currencies
+            if (_lastConvertCubitFrom != state.fromCurrency ||
+                _lastConvertCubitTo != state.toCurrency) {
+              _lastConvertCubitFrom = state.fromCurrency;
+              _lastConvertCubitTo = state.toCurrency;
+              setState(() {
+                _selectedFrom = state.fromCurrency;
+                _selectedTo = state.toCurrency;
+              });
+            }
+          }
+        },
         builder: (context, state) {
           if (state is! ConvertLoaded) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryLight),
+            return Center(
+              child: CircularProgressIndicator(color: primaryLightColor),
             );
           }
 
+          final activeFrom = _selectedFrom ?? state.fromCurrency;
+          final activeTo = _selectedTo ?? state.toCurrency;
+
           final unitRate = state.rates.convertBetween(
-                fromCurrency: _selectedFrom,
-                toCurrency: _selectedTo,
+                fromCurrency: activeFrom,
+                toCurrency: activeTo,
                 amount: 1.0,
               ) ??
               1.0;
-          final delta = _getPairDelta(_selectedFrom, _selectedTo);
+
+          final selectedTimeframe = _timeframes[_selectedTimeframeIndex];
+          final variance = RateChartWidget.getVariance(selectedTimeframe);
+          final timeframeSpots = List.generate(
+            variance.length,
+            (i) => unitRate * variance[i],
+          );
+          final highRate = timeframeSpots.reduce((a, b) => a > b ? a : b);
+          final lowRate = timeframeSpots.reduce((a, b) => a < b ? a : b);
+          final avgRate = timeframeSpots.reduce((a, b) => a + b) / timeframeSpots.length;
+
+          final baseDelta = _getPairDelta(activeFrom, activeTo);
+          final timeframeMultiplier = switch (selectedTimeframe) {
+            '24H' => 0.35,
+            '7D' => 1.0,
+            '1M' => 2.2,
+            '1Y' => 4.5,
+            _ => 1.0,
+          };
+          final delta = double.parse(
+            (baseDelta * timeframeMultiplier).toStringAsFixed(2),
+          );
           final isPositive = delta >= 0;
 
-          final high24h = unitRate * 1.012;
-          final low24h = unitRate * 0.988;
-          final avgRate = (high24h + low24h) / 2;
+          final highTitle = switch (selectedTimeframe) {
+            '24H' => '24h High',
+            '7D' => '7d High',
+            '1M' => '30d High',
+            '1Y' => '52w High',
+            _ => 'High',
+          };
+
+          final lowTitle = switch (selectedTimeframe) {
+            '24H' => '24h Low',
+            '7D' => '7d Low',
+            '1M' => '30d Low',
+            '1Y' => '52w Low',
+            _ => 'Low',
+          };
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -102,14 +214,16 @@ class _RatesScreenState extends State<RatesScreen> {
                   height: 38,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
                     itemCount: _quickPairs.length,
                     separatorBuilder: (context, index) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
                       final pair = _quickPairs[index];
                       final isSelected =
-                          pair.$1 == _selectedFrom && pair.$2 == _selectedTo;
+                          pair.$1 == activeFrom && pair.$2 == activeTo;
                       return InkWell(
                         onTap: () {
+                          HapticFeedback.selectionClick();
                           setState(() {
                             _selectedFrom = pair.$1;
                             _selectedTo = pair.$2;
@@ -123,12 +237,12 @@ class _RatesScreenState extends State<RatesScreen> {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary : AppColors.surface,
+                            color: isSelected ? primaryColor : surfaceColor,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: isSelected
-                                  ? AppColors.primaryLight
-                                  : AppColors.cardBorder,
+                                  ? primaryLightColor
+                                  : borderColor,
                             ),
                           ),
                           child: Text(
@@ -136,7 +250,7 @@ class _RatesScreenState extends State<RatesScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                              color: isSelected ? Colors.white : AppColors.textSecondary,
+                              color: isSelected ? Colors.white : labelMutedColor,
                             ),
                           ),
                         ),
@@ -150,16 +264,24 @@ class _RatesScreenState extends State<RatesScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: surfaceColor,
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    border: Border.all(color: borderColor, width: 1.2),
+                    boxShadow: isLight
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,7 +297,9 @@ class _RatesScreenState extends State<RatesScreen> {
                               Row(
                                 children: [
                                   _buildFlagPill(
-                                    code: _selectedFrom,
+                                    code: activeFrom,
+                                    surfaceAlt: surfaceAlt,
+                                    borderColor: borderColor,
                                     onTap: () => _pickCurrency(
                                       isSource: true,
                                       availableCodes: state.rates.rates.keys.toSet(),
@@ -184,13 +308,15 @@ class _RatesScreenState extends State<RatesScreen> {
                                   const Padding(
                                     padding: EdgeInsets.symmetric(horizontal: 6),
                                     child: Icon(
-                                      Icons.arrow_forward_rounded,
-                                      size: 16,
+                                      CupertinoIcons.arrow_right,
+                                      size: 14,
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
                                   _buildFlagPill(
-                                    code: _selectedTo,
+                                    code: activeTo,
+                                    surfaceAlt: surfaceAlt,
+                                    borderColor: borderColor,
                                     onTap: () => _pickCurrency(
                                       isSource: false,
                                       availableCodes: state.rates.rates.keys.toSet(),
@@ -200,12 +326,12 @@ class _RatesScreenState extends State<RatesScreen> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                '1 $_selectedFrom = ${unitRate > 100 ? unitRate.toStringAsFixed(2) : unitRate.toStringAsFixed(4)} $_selectedTo',
-                                style: const TextStyle(
+                                '1 $activeFrom = ${unitRate > 100 ? unitRate.toStringAsFixed(2) : unitRate.toStringAsFixed(4)} $activeTo',
+                                style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.6,
-                                  color: AppColors.textPrimary,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -226,9 +352,9 @@ class _RatesScreenState extends State<RatesScreen> {
                               children: [
                                 Icon(
                                   isPositive
-                                      ? Icons.trending_up_rounded
-                                      : Icons.trending_down_rounded,
-                                  size: 16,
+                                      ? CupertinoIcons.arrow_up_right
+                                      : CupertinoIcons.arrow_down_right,
+                                  size: 14,
                                   color: isPositive
                                       ? AppColors.deltaPositive
                                       : AppColors.deltaNegative,
@@ -255,21 +381,24 @@ class _RatesScreenState extends State<RatesScreen> {
                       Container(
                         padding: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
+                          color: surfaceAlt,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.borderHighlight),
+                          border: Border.all(color: borderColor),
                         ),
                         child: Row(
                           children: List.generate(_timeframes.length, (i) {
                             final isSel = _selectedTimeframeIndex == i;
                             return Expanded(
                               child: InkWell(
-                                onTap: () => setState(() => _selectedTimeframeIndex = i),
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _selectedTimeframeIndex = i);
+                                },
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: isSel ? AppColors.primary : Colors.transparent,
+                                    color: isSel ? primaryColor : Colors.transparent,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Center(
@@ -295,9 +424,10 @@ class _RatesScreenState extends State<RatesScreen> {
 
                       // Chart
                       RateChartWidget(
-                        fromCurrency: _selectedFrom,
-                        toCurrency: _selectedTo,
+                        fromCurrency: activeFrom,
+                        toCurrency: activeTo,
                         currentRate: unitRate,
+                        timeframe: selectedTimeframe,
                       ),
                     ],
                   ),
@@ -305,13 +435,13 @@ class _RatesScreenState extends State<RatesScreen> {
                 const SizedBox(height: 20),
 
                 // 3. Analytics & Statistics Grid
-                const Text(
+                Text(
                   'MARKET METRICS',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
-                    color: AppColors.textSecondary,
+                    color: labelMutedColor,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -319,22 +449,28 @@ class _RatesScreenState extends State<RatesScreen> {
                   children: [
                     Expanded(
                       child: _buildMetricTile(
-                        title: '24h High',
-                        value: high24h > 100
-                            ? high24h.toStringAsFixed(2)
-                            : high24h.toStringAsFixed(4),
-                        icon: Icons.arrow_upward_rounded,
+                        context: context,
+                        surfaceColor: surfaceColor,
+                        borderColor: borderColor,
+                        title: highTitle,
+                        value: highRate > 100
+                            ? highRate.toStringAsFixed(2)
+                            : highRate.toStringAsFixed(4),
+                        icon: CupertinoIcons.arrow_up,
                         accentColor: AppColors.deltaPositive,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildMetricTile(
-                        title: '24h Low',
-                        value: low24h > 100
-                            ? low24h.toStringAsFixed(2)
-                            : low24h.toStringAsFixed(4),
-                        icon: Icons.arrow_downward_rounded,
+                        context: context,
+                        surfaceColor: surfaceColor,
+                        borderColor: borderColor,
+                        title: lowTitle,
+                        value: lowRate > 100
+                            ? lowRate.toStringAsFixed(2)
+                            : lowRate.toStringAsFixed(4),
+                        icon: CupertinoIcons.arrow_down,
                         accentColor: AppColors.deltaNegative,
                       ),
                     ),
@@ -345,21 +481,29 @@ class _RatesScreenState extends State<RatesScreen> {
                   children: [
                     Expanded(
                       child: _buildMetricTile(
+                        context: context,
+                        surfaceColor: surfaceColor,
+                        borderColor: borderColor,
                         title: 'Average Rate',
                         value: avgRate > 100
                             ? avgRate.toStringAsFixed(2)
                             : avgRate.toStringAsFixed(4),
-                        icon: Icons.show_chart_rounded,
-                        accentColor: AppColors.primaryLight,
+                        icon: CupertinoIcons.waveform_path_ecg,
+                        accentColor: primaryLightColor,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildMetricTile(
-                        title: 'Spread',
-                        value: '${((high24h - low24h) / unitRate * 100).toStringAsFixed(2)}%',
-                        icon: Icons.compare_arrows_rounded,
-                        accentColor: AppColors.warning,
+                        context: context,
+                        surfaceColor: surfaceColor,
+                        borderColor: borderColor,
+                        title: 'Current Rate',
+                        value: unitRate > 100
+                            ? unitRate.toStringAsFixed(2)
+                            : unitRate.toStringAsFixed(4),
+                        icon: CupertinoIcons.bolt_fill,
+                        accentColor: primaryLightColor,
                       ),
                     ),
                   ],
@@ -372,7 +516,12 @@ class _RatesScreenState extends State<RatesScreen> {
     );
   }
 
-  Widget _buildFlagPill({required String code, required VoidCallback onTap}) {
+  Widget _buildFlagPill({
+    required String code,
+    required Color surfaceAlt,
+    required Color borderColor,
+    required VoidCallback onTap,
+  }) {
     final flagCode = FlagCode.fromCurrencyCode(code);
     final countryCode = kCurrencyData[code]?.countryCode ??
         code.substring(0, code.length > 2 ? 2 : code.length);
@@ -383,9 +532,9 @@ class _RatesScreenState extends State<RatesScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
+          color: surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderHighlight),
+          border: Border.all(color: borderColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -402,14 +551,18 @@ class _RatesScreenState extends State<RatesScreen> {
             const SizedBox(width: 6),
             Text(
               code,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(width: 2),
-            const Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+            Icon(
+              CupertinoIcons.chevron_down,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -417,6 +570,9 @@ class _RatesScreenState extends State<RatesScreen> {
   }
 
   Widget _buildMetricTile({
+    required BuildContext context,
+    required Color surfaceColor,
+    required Color borderColor,
     required String title,
     required String value,
     required IconData icon,
@@ -425,9 +581,9 @@ class _RatesScreenState extends State<RatesScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,10 +593,10 @@ class _RatesScreenState extends State<RatesScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               Icon(icon, size: 14, color: accentColor),
@@ -449,10 +605,10 @@ class _RatesScreenState extends State<RatesScreen> {
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               letterSpacing: -0.4,
             ),
           ),

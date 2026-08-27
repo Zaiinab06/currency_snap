@@ -1,4 +1,5 @@
 import 'package:country_flags/country_flags.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/favourite_pair_model.dart';
@@ -27,15 +28,32 @@ class FavoritePairTile extends StatelessWidget {
   }
 
   double get _deltaPercent {
-    // Deterministic 24h delta percentage derived from pair code
     final hash = (pair.fromCurrency.hashCode ^ pair.toCurrency.hashCode).abs();
     final base = ((hash % 140) / 100.0) - 0.55;
     return double.parse(base.toStringAsFixed(2));
   }
 
-  Widget _buildDualFlags(String fromCode, String toCode) {
-    final fromFlag = FlagCode.fromCurrencyCode(fromCode);
-    final toFlag = FlagCode.fromCurrencyCode(toCode);
+  Widget _buildFlagAvatar(String currencyCode, String countryCode) {
+    final fromFlag = FlagCode.fromCurrencyCode(currencyCode);
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: ClipOval(
+        child: fromFlag != null
+            ? CountryFlag.fromCurrencyCode(
+                currencyCode,
+                shape: const Circle(),
+              )
+            : CountryFlag.fromCountryCode(
+                countryCode,
+                shape: const Circle(),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildDualFlags(BuildContext context, String fromCode, String toCode) {
+    final theme = Theme.of(context);
     final fromCountry = kCurrencyData[fromCode]?.countryCode ??
         fromCode.substring(0, fromCode.length > 2 ? 2 : fromCode.length);
     final toCountry = kCurrencyData[toCode]?.countryCode ??
@@ -50,50 +68,26 @@ class FavoritePairTile extends StatelessWidget {
             left: 0,
             top: 0,
             child: Container(
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.surface, width: 1.5),
+                border: Border.all(color: theme.cardColor, width: 1.5),
               ),
-              child: ClipOval(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: fromFlag != null
-                      ? CountryFlag.fromCurrencyCode(
-                          fromCode,
-                          shape: const Circle(),
-                        )
-                      : CountryFlag.fromCountryCode(
-                          fromCountry,
-                          shape: const Circle(),
-                        ),
-                ),
-              ),
+              child: _buildFlagAvatar(fromCode, fromCountry),
             ),
           ),
           Positioned(
             left: 18,
             top: 0,
             child: Container(
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.surface, width: 1.5),
+                border: Border.all(color: theme.cardColor, width: 1.5),
               ),
-              child: ClipOval(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: toFlag != null
-                      ? CountryFlag.fromCurrencyCode(
-                          toCode,
-                          shape: const Circle(),
-                        )
-                      : CountryFlag.fromCountryCode(
-                          toCountry,
-                          shape: const Circle(),
-                        ),
-                ),
-              ),
+              child: _buildFlagAvatar(toCode, toCountry),
             ),
           ),
         ],
@@ -123,10 +117,11 @@ class FavoritePairTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isPositive ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-            size: 16,
+            isPositive ? CupertinoIcons.arrow_up_right : CupertinoIcons.arrow_down_right,
+            size: 12,
             color: textColor,
           ),
+          const SizedBox(width: 2),
           Text(
             '$sign${percent.toStringAsFixed(2)}%',
             style: TextStyle(
@@ -143,11 +138,16 @@ class FavoritePairTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor = theme.cardColor;
+    final borderColor = theme.dividerColor;
+    final primaryLightColor = theme.colorScheme.secondary;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.2),
@@ -165,7 +165,7 @@ class FavoritePairTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                _buildDualFlags(pair.fromCurrency, pair.toCurrency),
+                _buildDualFlags(context, pair.fromCurrency, pair.toCurrency),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -173,18 +173,18 @@ class FavoritePairTile extends StatelessWidget {
                     children: [
                       Text(
                         '${pair.fromCurrency} → ${pair.toCurrency}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                           letterSpacing: -0.4,
-                          color: AppColors.textPrimary,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         '1 ${pair.fromCurrency} = ${pair.rate > 100 ? pair.rate.toStringAsFixed(2) : pair.rate.toStringAsFixed(4)} ${pair.toCurrency}',
-                        style: const TextStyle(
-                          color: AppColors.primaryLight,
+                        style: TextStyle(
+                          color: primaryLightColor,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
@@ -193,8 +193,8 @@ class FavoritePairTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'Saved $_relativeTime',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
                           fontSize: 11,
                           fontWeight: FontWeight.w400,
                         ),
@@ -202,19 +202,24 @@ class FavoritePairTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                _buildDeltaBadge(_deltaPercent),
-                const SizedBox(width: 6),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: AppColors.textMuted,
-                    size: 20,
-                  ),
-                  tooltip: 'Delete favorite',
-                  padding: const EdgeInsets.all(8),
-                  constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-                  splashRadius: 20,
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildDeltaBadge(_deltaPercent),
+                    const SizedBox(height: 6),
+                    IconButton(
+                      icon: const Icon(
+                        CupertinoIcons.trash,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: onDelete,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      tooltip: 'Remove',
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -224,6 +229,3 @@ class FavoritePairTile extends StatelessWidget {
     );
   }
 }
-
-
-

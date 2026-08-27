@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -26,7 +27,7 @@ class ErrorBanner extends StatelessWidget {
                 border: Border.all(color: AppColors.cardBorder),
               ),
               child: const Icon(
-                Icons.wifi_off_rounded,
+                CupertinoIcons.wifi_slash,
                 size: 36,
                 color: AppColors.primaryLight,
               ),

@@ -1,13 +1,16 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../bloc/convert/convert_cubit.dart';
 import '../../../bloc/favorites/favorites_cubit.dart';
 import '../../../bloc/favorites/favorites_state.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/favorites/favorite_pair_tile.dart';
+import '../historical_rates/historical_rate_chart_screen.dart';
 
-/// Screen displaying and managing the user's saved favorite currency pairs in Midnight Neon theme.
+/// Screen displaying and managing the user's saved favorite currency pairs with dynamic theming.
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
@@ -24,10 +27,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scaffoldBg = theme.scaffoldBackgroundColor;
+    final primaryLight = theme.colorScheme.secondary;
+    final surfaceColor = theme.cardColor;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: scaffoldBg,
         title: const Text(
           'Favorite Pairs',
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
@@ -53,9 +61,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
             return RefreshIndicator(
               onRefresh: () => context.read<FavoritesCubit>().loadFavorites(),
-              color: AppColors.primaryLight,
-              backgroundColor: AppColors.surface,
+              color: primaryLight,
+              backgroundColor: surfaceColor,
               child: ListView.separated(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 itemCount: state.favorites.length,
                 separatorBuilder: (context, index) => const SizedBox(height: 12),
@@ -64,6 +73,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   return FavoritePairTile(
                     key: ValueKey(pair.id),
                     pair: pair,
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      final convertCubit = context.read<ConvertCubit>();
+                      convertCubit.changeSourceCurrency(pair.fromCurrency);
+                      convertCubit.changeTargetCurrency(pair.toCurrency);
+                      Navigator.of(context).push(
+                        CupertinoPageRoute(
+                          builder: (_) => HistoricalRateChartScreen(
+                            fromCurrency: pair.fromCurrency,
+                            toCurrency: pair.toCurrency,
+                            currentRate: pair.rate,
+                          ),
+                        ),
+                      );
+                    },
                     onDelete: () {
                       context.read<FavoritesCubit>().removeFavorite(pair);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,6 +108,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor = theme.cardColor;
+    final borderColor = theme.dividerColor;
+    final primaryLight = theme.colorScheme.secondary;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -94,32 +123,32 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               width: 76,
               height: 76,
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: surfaceColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.cardBorder),
+                border: Border.all(color: borderColor),
               ),
-              child: const Icon(
-                Icons.star_border_rounded,
-                color: AppColors.primaryLight,
+              child: Icon(
+                CupertinoIcons.star,
+                color: primaryLight,
                 size: 38,
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'No favorite pairs saved',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Save your most converted currency pairs from the Home screen for instant tracking.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: theme.colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
             ),
@@ -129,4 +158,3 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 }
-

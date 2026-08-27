@@ -1,4 +1,5 @@
 import 'package:currency_snap/data/models/favourite_pair_model.dart';
+import 'package:currency_snap/data/models/conversion_history_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repositories/currency_repository.dart';
 import '../../core/constants/app_constants.dart';
@@ -175,5 +176,27 @@ class ConvertCubit extends Cubit<ConvertState> {
       rate: rate,
     );
     await _repository.addFavorite(pair);
+  }
+
+  /// Persists the currently calculated conversion to conversion history.
+  Future<void> recordCurrentConversion() async {
+    final current = state;
+    if (current is! ConvertLoaded || current.convertedAmount == null) return;
+    if (current.amount <= 0) return;
+
+    final unitRate = current.rates.convertBetween(
+      fromCurrency: current.fromCurrency,
+      toCurrency: current.toCurrency,
+      amount: 1,
+    ) ?? (current.convertedAmount! / current.amount);
+
+    final historyItem = ConversionHistoryModel.create(
+      fromCurrency: current.fromCurrency,
+      toCurrency: current.toCurrency,
+      fromAmount: current.amount,
+      toAmount: current.convertedAmount!,
+      rate: unitRate,
+    );
+    await _repository.addHistory(historyItem);
   }
 }

@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../presentation/navigation/app_bottom_nav.dart';
 import '../presentation/screens/splash/splash_screen.dart';
 
-/// Central routing configuration for named route navigation.
+/// Central routing configuration for named route navigation using iOS CupertinoPageRoutes.
 class AppRouter {
   AppRouter._();
 
@@ -12,11 +12,11 @@ class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case splash:
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return CupertinoPageRoute(builder: (_) => const SplashScreen());
       case main:
-        return MaterialPageRoute(builder: (_) => const AppBottomNav());
+        return CupertinoPageRoute(builder: (_) => const AppBottomNav());
       default:
-        return MaterialPageRoute(builder: (_) => const AppBottomNav());
+        return CupertinoPageRoute(builder: (_) => const AppBottomNav());
     }
   }
 }

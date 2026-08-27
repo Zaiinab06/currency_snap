@@ -1,9 +1,10 @@
-import 'package:currency_snap/data/models/favourite_pair_model.dart';
-
 import '../models/currency_rate_model.dart';
+import '../models/favourite_pair_model.dart';
+import '../models/conversion_history_model.dart';
 import '../datasources/remote/currency_remote_datasource.dart';
 import '../datasources/local/currency_cache_datasource.dart';
 import '../datasources/local/favorites_local_datasource.dart';
+import '../datasources/local/history_local_datasource.dart';
 import '../../core/errors/app_exceptions.dart';
 
 /// Wraps a rate result together with whether it came from the network
@@ -20,16 +21,18 @@ class RateResult {
   });
 }
 
-/// Single source of truth for currency rate data.
+/// Single source of truth for currency rate data, favorites, and conversion history.
 class CurrencyRepository {
   final CurrencyRemoteDataSource _remoteDataSource;
   final CurrencyCacheDataSource _cacheDataSource;
   final FavoritesLocalDataSource _favoritesDataSource;
+  final HistoryLocalDataSource _historyDataSource;
 
   CurrencyRepository(
     this._remoteDataSource,
     this._cacheDataSource,
     this._favoritesDataSource,
+    this._historyDataSource,
   );
 
   Future<RateResult> getRates(String baseCurrency, {bool forceRefresh = false}) async {
@@ -57,6 +60,7 @@ class CurrencyRepository {
     }
   }
 
+  // Favorites
   Future<List<FavoritePairModel>> getFavorites() {
     return _favoritesDataSource.getFavorites();
   }
@@ -73,6 +77,24 @@ class CurrencyRepository {
     return _favoritesDataSource.isFavorite(id);
   }
 
+  // Conversion History
+  Future<List<ConversionHistoryModel>> getHistory() {
+    return _historyDataSource.getHistory();
+  }
+
+  Future<void> addHistory(ConversionHistoryModel item) {
+    return _historyDataSource.addHistory(item);
+  }
+
+  Future<void> deleteHistoryItem(String id) {
+    return _historyDataSource.deleteHistoryItem(id);
+  }
+
+  Future<void> clearHistory() {
+    return _historyDataSource.clearHistory();
+  }
+
+  // Cache
   Future<void> clearCache() {
     return _cacheDataSource.clearCache();
   }

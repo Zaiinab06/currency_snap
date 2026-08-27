@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:currency_snap/core/utils/currency_formatter.dart';
 
@@ -36,6 +37,47 @@ void main() {
       expect(parseAmount(''), 0.0);
       expect(parseAmount('invalid'), 0.0);
       expect(parseAmount('-150.75'), -150.75);
+    });
+  });
+
+  group('ThousandsSeparatorInputFormatter', () {
+    final formatter = ThousandsSeparatorInputFormatter();
+
+    test('formats numbers as commas are typed', () {
+      final res1 = formatter.formatEditUpdate(
+        TextEditingValue.empty,
+        const TextEditingValue(
+          text: '50000',
+          selection: TextSelection.collapsed(offset: 5),
+        ),
+      );
+      expect(res1.text, '50,000');
+      expect(res1.selection.baseOffset, 6);
+
+      final res2 = formatter.formatEditUpdate(
+        res1,
+        const TextEditingValue(
+          text: '50,000.50',
+          selection: TextSelection.collapsed(offset: 9),
+        ),
+      );
+      expect(res2.text, '50,000.50');
+      expect(res2.selection.baseOffset, 9);
+    });
+
+    test('rejects non-numeric characters', () {
+      const oldVal = TextEditingValue(
+        text: '500',
+        selection: TextSelection.collapsed(offset: 3),
+      );
+      final res = formatter.formatEditUpdate(
+        oldVal,
+        const TextEditingValue(
+          text: '500abc',
+          selection: TextSelection.collapsed(offset: 6),
+        ),
+      );
+      expect(res.text, '500');
     });
   });
 }

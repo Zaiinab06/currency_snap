@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:country_flags/country_flags.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../bloc/convert/convert_cubit.dart';
 import '../../../bloc/convert/convert_state.dart';
@@ -16,15 +18,6 @@ import '../../widgets/home/swap_button.dart';
 import '../historical_rates/historical_rate_chart_screen.dart';
 import '../rates/rates_screen.dart';
 
-/// Main Converter Dashboard with dynamic theme palette reactivity:
-/// - Greeting header ("Hello, Zainab 👋")
-/// - Vertical column live exchange rate status & full visible timestamp
-/// - Stacked input cards with centered animated swap button
-/// - Thousands separator input formatting with precise cursor positioning
-/// - Dismiss focus/cursor on tap outside anywhere
-/// - Quick preset amount pills (100, 500, 1000, 5000)
-/// - "Save Pair" animated feedback for 1.2s
-/// - "Popular Pairs" horizontal preview cards at bottom with 130px bottom clearance
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -105,9 +98,13 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BlocConsumer<ConvertCubit, ConvertState>(
             listener: (context, state) {
               if (state is ConvertLoaded) {
-                final parsed = CurrencyFormatter.parseAmount(_amountController.text);
+                final parsed = CurrencyFormatter.parseAmount(
+                  _amountController.text,
+                );
                 if ((parsed - state.amount).abs() > 0.001) {
-                  final formattedAmount = CurrencyFormatter.formatInputAmount(state.amount);
+                  final formattedAmount = CurrencyFormatter.formatInputAmount(
+                    state.amount,
+                  );
                   _amountController.text = formattedAmount;
                   _amountController.selection = TextSelection.fromPosition(
                     TextPosition(offset: _amountController.text.length),
@@ -136,13 +133,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLoadedContent(BuildContext context, ConvertLoaded state) {
     final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
     final primaryColor = theme.colorScheme.primary;
     final primaryLightColor = theme.colorScheme.secondary;
-    final surfaceColor = theme.cardColor;
-    final borderColor = theme.dividerColor;
+    final surfaceColor = isLight ? Colors.white : theme.cardColor;
+    final borderColor = isLight
+        ? Colors.black.withValues(alpha: 0.06)
+        : theme.dividerColor;
+    final labelMutedColor = isLight
+        ? const Color(0xFF64748B)
+        : theme.colorScheme.onSurfaceVariant;
     final cubit = context.read<ConvertCubit>();
 
-    final unitRate = state.rates.convertBetween(
+    final unitRate =
+        state.rates.convertBetween(
           fromCurrency: state.fromCurrency,
           toCurrency: state.toCurrency,
           amount: 1.0,
@@ -159,13 +163,13 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Hello, Zainab 👋',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.6,
-                  color: AppColors.textPrimary,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -176,12 +180,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: state.isFromCache ? AppColors.warning : AppColors.success,
+                      color: state.isFromCache
+                          ? AppColors.warning
+                          : AppColors.success,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: (state.isFromCache ? AppColors.warning : AppColors.success)
-                              .withValues(alpha: 0.6),
+                          color:
+                              (state.isFromCache
+                                      ? AppColors.warning
+                                      : AppColors.success)
+                                  .withValues(alpha: 0.6),
                           blurRadius: 6,
                           spreadRadius: 1,
                         ),
@@ -191,10 +200,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 8),
                   Text(
                     state.isFromCache ? 'Cached Rates' : 'Live Exchange Rates',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                      color: labelMutedColor,
                     ),
                   ),
                 ],
@@ -209,28 +218,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       state.lastSyncTime,
                       isFromCache: state.isFromCache,
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF8E8EA8),
+                      color: labelMutedColor,
                     ),
                   ),
                   const SizedBox(width: 6),
                   InkWell(
-                    onTap: state.isRefreshing
-                        ? null
-                        : () {
-                            cubit.refreshRates(forceRefresh: true);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Refreshing live exchange rates...'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-                          },
-                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => cubit.refreshRates(forceRefresh: true),
+                    borderRadius: BorderRadius.circular(12),
                     child: Padding(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(2.0),
                       child: state.isRefreshing
                           ? SizedBox(
                               width: 14,
@@ -241,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             )
                           : Icon(
-                              Icons.refresh_rounded,
+                              CupertinoIcons.arrow_2_circlepath,
                               color: primaryLightColor,
                               size: 16,
                             ),
@@ -257,13 +256,13 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'QUICK AMOUNT',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: AppColors.textSecondary,
+                  color: labelMutedColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -272,17 +271,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: surfaceColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor, width: 1.0),
+                  border: Border.all(color: borderColor, width: 1.2),
+                  boxShadow: isLight
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Row(
                   children: _presetAmounts.map((preset) {
                     final isSelected = (state.amount - preset).abs() < 0.001;
-                    final presetDisplay = CurrencyFormatter.formatInputAmount(preset);
+                    final presetDisplay = CurrencyFormatter.formatInputAmount(
+                      preset,
+                    );
                     return Expanded(
                       child: InkWell(
                         onTap: () {
+                          HapticFeedback.selectionClick();
                           _amountController.text = presetDisplay;
-                          _amountController.selection = TextSelection.fromPosition(
+                          _amountController
+                              .selection = TextSelection.fromPosition(
                             TextPosition(offset: _amountController.text.length),
                           );
                           cubit.updateAmount(preset);
@@ -294,12 +306,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           curve: Curves.easeInOut,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSelected ? primaryColor : Colors.transparent,
+                            color: isSelected
+                                ? primaryColor
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: primaryColor.withValues(alpha: 0.4),
+                                      color: primaryColor.withValues(
+                                        alpha: 0.4,
+                                      ),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -311,9 +327,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               presetDisplay,
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight:
-                                    isSelected ? FontWeight.w800 : FontWeight.w600,
-                                color: isSelected ? Colors.white : AppColors.textSecondary,
+                                fontWeight: isSelected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: isSelected
+                                    ? Colors.white
+                                    : labelMutedColor,
                                 letterSpacing: -0.2,
                               ),
                             ),
@@ -338,7 +357,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     key: ValueKey('send_${state.fromCurrency}'),
                     label: 'From',
                     currencyCode: state.fromCurrency,
-                    amountText: CurrencyFormatter.formatInputAmount(state.amount),
+                    amountText: CurrencyFormatter.formatInputAmount(
+                      state.amount,
+                    ),
                     controller: _amountController,
                     isEditable: true,
                     isDark: false,
@@ -384,27 +405,42 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                color: isLight
+                    ? Colors.white
+                    : theme.colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.7,
+                      ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: primaryColor.withValues(alpha: 0.2),
-                  width: 1,
+                  color: isLight
+                      ? Colors.black.withValues(alpha: 0.06)
+                      : primaryColor.withValues(alpha: 0.2),
+                  width: 1.2,
                 ),
+                boxShadow: isLight
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.info_outline_rounded,
+                    CupertinoIcons.info_circle,
                     size: 14,
                     color: primaryLightColor,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '1 ${state.fromCurrency} = ${unitRate > 100 ? unitRate.toStringAsFixed(2) : unitRate.toStringAsFixed(4)} ${state.toCurrency}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: theme.colorScheme.onSurface,
                       fontSize: 13,
                       letterSpacing: -0.2,
                     ),
@@ -422,8 +458,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    HapticFeedback.lightImpact();
                     Navigator.of(context).push(
-                      MaterialPageRoute(
+                      CupertinoPageRoute(
                         builder: (_) => HistoricalRateChartScreen(
                           fromCurrency: state.fromCurrency,
                           toCurrency: state.toCurrency,
@@ -433,7 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                   icon: const Icon(
-                    Icons.trending_up_rounded,
+                    CupertinoIcons.chart_bar_alt_fill,
                     size: 18,
                     color: Colors.white,
                   ),
@@ -459,17 +496,21 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
+                    HapticFeedback.lightImpact();
                     setState(() {
                       _isSavedPairActive = true;
                     });
                     _savePairTimer?.cancel();
-                    _savePairTimer = Timer(const Duration(milliseconds: 1200), () {
-                      if (mounted) {
-                        setState(() {
-                          _isSavedPairActive = false;
-                        });
-                      }
-                    });
+                    _savePairTimer = Timer(
+                      const Duration(milliseconds: 1200),
+                      () {
+                        if (mounted) {
+                          setState(() {
+                            _isSavedPairActive = false;
+                          });
+                        }
+                      },
+                    );
 
                     await cubit.saveCurrentPairToFavorites();
                     if (context.mounted) {
@@ -486,12 +527,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                   icon: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
-                    transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
                     child: Icon(
-                      _isSavedPairActive ? Icons.star_rounded : Icons.star_border_rounded,
+                      _isSavedPairActive
+                          ? CupertinoIcons.star_fill
+                          : CupertinoIcons.star,
                       key: ValueKey(_isSavedPairActive),
                       size: 18,
-                      color: _isSavedPairActive ? primaryColor : primaryLightColor,
+                      color: _isSavedPairActive
+                          ? primaryColor
+                          : primaryLightColor,
                     ),
                   ),
                   label: AnimatedDefaultTextStyle(
@@ -499,12 +545,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
-                      color: _isSavedPairActive ? primaryColor : primaryLightColor,
+                      color: _isSavedPairActive
+                          ? primaryColor
+                          : primaryLightColor,
                     ),
-                    child: Text(_isSavedPairActive ? 'Saved Pair!' : 'Save Pair'),
+                    child: Text(
+                      _isSavedPairActive ? 'Saved Pair!' : 'Save Pair',
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: _isSavedPairActive ? primaryColor : primaryLightColor,
+                    foregroundColor: _isSavedPairActive
+                        ? primaryColor
+                        : primaryLightColor,
                     backgroundColor: _isSavedPairActive
                         ? primaryColor.withValues(alpha: 0.16)
                         : surfaceColor,
@@ -530,33 +582,40 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 children: [
                   Icon(
-                    Icons.local_fire_department_rounded,
+                    CupertinoIcons.flame_fill,
                     size: 18,
                     color: primaryLightColor,
                   ),
                   const SizedBox(width: 6),
-                  const Text(
+                  Text(
                     'POPULAR PAIRS',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
-                      color: AppColors.textSecondary,
+                      color: labelMutedColor,
                     ),
                   ),
                 ],
               ),
               InkWell(
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const RatesScreen(),
+                    CupertinoPageRoute(
+                      builder: (_) => RatesScreen(
+                        initialFromCurrency: state.fromCurrency,
+                        initialToCurrency: state.toCurrency,
+                      ),
                     ),
                   );
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   child: Text(
                     'See All',
                     style: TextStyle(
@@ -581,7 +640,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 final pair = _popularPairs[index];
                 final pairFrom = pair.$1;
                 final pairTo = pair.$2;
-                final rate = state.rates.convertBetween(
+                final rate =
+                    state.rates.convertBetween(
                       fromCurrency: pairFrom,
                       toCurrency: pairTo,
                       amount: 1.0,
@@ -590,15 +650,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 final delta = _getPairDelta(pairFrom, pairTo);
                 final isPositive = delta >= 0;
 
-                final fromCountry = kCurrencyData[pairFrom]?.countryCode ??
-                    pairFrom.substring(0, pairFrom.length > 2 ? 2 : pairFrom.length);
-                final toCountry = kCurrencyData[pairTo]?.countryCode ??
+                final fromCountry =
+                    kCurrencyData[pairFrom]?.countryCode ??
+                    pairFrom.substring(
+                      0,
+                      pairFrom.length > 2 ? 2 : pairFrom.length,
+                    );
+                final toCountry =
+                    kCurrencyData[pairTo]?.countryCode ??
                     pairTo.substring(0, pairTo.length > 2 ? 2 : pairTo.length);
 
                 return Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
+                      HapticFeedback.selectionClick();
                       cubit.changeSourceCurrency(pairFrom);
                       cubit.changeTargetCurrency(pairTo);
                       cubit.recordCurrentConversion();
@@ -611,13 +677,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: surfaceColor,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: borderColor, width: 1.2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
+                        boxShadow: isLight
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -645,7 +719,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                           child: SizedBox(
                                             width: 22,
                                             height: 22,
-                                            child: FlagCode.fromCurrencyCode(pairFrom) != null
+                                            child:
+                                                FlagCode.fromCurrencyCode(
+                                                      pairFrom,
+                                                    ) !=
+                                                    null
                                                 ? CountryFlag.fromCurrencyCode(
                                                     pairFrom,
                                                     shape: const Circle(),
@@ -672,7 +750,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                           child: SizedBox(
                                             width: 22,
                                             height: 22,
-                                            child: FlagCode.fromCurrencyCode(pairTo) != null
+                                            child:
+                                                FlagCode.fromCurrencyCode(
+                                                      pairTo,
+                                                    ) !=
+                                                    null
                                                 ? CountryFlag.fromCurrencyCode(
                                                     pairTo,
                                                     shape: const Circle(),
@@ -695,8 +777,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isPositive
-                                      ? AppColors.deltaPositive.withValues(alpha: 0.18)
-                                      : AppColors.deltaNegative.withValues(alpha: 0.18),
+                                      ? AppColors.deltaPositive.withValues(
+                                          alpha: 0.18,
+                                        )
+                                      : AppColors.deltaNegative.withValues(
+                                          alpha: 0.18,
+                                        ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -717,11 +803,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text(
                                 '$pairFrom / $pairTo',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: -0.2,
-                                  color: AppColors.textPrimary,
+                                  color: theme.colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -752,10 +838,10 @@ class _HomeScreenState extends State<HomeScreen> {
             'Mid-market exchange rates provided for informational purposes only. Actual transaction rates may vary by institution.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                  height: 1.4,
-                ),
+              color: AppColors.textMuted,
+              fontSize: 11,
+              height: 1.4,
+            ),
           ),
         ],
       ),

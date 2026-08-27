@@ -1,32 +1,15 @@
 import 'package:country_flags/country_flags.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../bloc/convert/convert_cubit.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/models/conversion_history_model.dart';
+import '../../../data/repositories/currency_repository.dart';
 import '../../bottom_sheets/currency_picker_sheet.dart';
 
-class HistoryItem {
-  final String id;
-  final String fromCurrency;
-  final String toCurrency;
-  final double fromAmount;
-  final double toAmount;
-  final double rate;
-  final DateTime timestamp;
-
-  const HistoryItem({
-    required this.id,
-    required this.fromCurrency,
-    required this.toCurrency,
-    required this.fromAmount,
-    required this.toAmount,
-    required this.rate,
-    required this.timestamp,
-  });
-}
-
-/// Screen displaying user's recent conversion history logs in Midnight Neon theme.
+/// Screen displaying user's persisted conversion history logs with dynamic theming, search, copy, delete, and re-convert actions.
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
@@ -35,64 +18,38 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  final List<HistoryItem> _history = [
-    HistoryItem(
-      id: '1',
-      fromCurrency: 'USD',
-      toCurrency: 'EUR',
-      fromAmount: 500,
-      toAmount: 460.00,
-      rate: 0.9200,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-    ),
-    HistoryItem(
-      id: '2',
-      fromCurrency: 'GBP',
-      toCurrency: 'USD',
-      fromAmount: 1000,
-      toAmount: 1265.00,
-      rate: 1.2650,
-      timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 20)),
-    ),
-    HistoryItem(
-      id: '3',
-      fromCurrency: 'USD',
-      toCurrency: 'PKR',
-      fromAmount: 100,
-      toAmount: 27850.00,
-      rate: 278.50,
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-    HistoryItem(
-      id: '4',
-      fromCurrency: 'EUR',
-      toCurrency: 'GBP',
-      fromAmount: 250,
-      toAmount: 214.25,
-      rate: 0.8570,
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    HistoryItem(
-      id: '5',
-      fromCurrency: 'USD',
-      toCurrency: 'JPY',
-      fromAmount: 1000,
-      toAmount: 154300.00,
-      rate: 154.30,
-      timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 4)),
-    ),
-    HistoryItem(
-      id: '6',
-      fromCurrency: 'AUD',
-      toCurrency: 'USD',
-      fromAmount: 5000,
-      toAmount: 3260.00,
-      rate: 0.6520,
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
-
+  List<ConversionHistoryModel> _history = [];
   String _filterQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final repository = context.read<CurrencyRepository>();
+    final items = await repository.getHistory();
+    if (mounted) {
+      setState(() {
+        _history = items;
+      });
+    }
+  }
+
+  Future<void> _deleteItem(String id) async {
+    final repository = context.read<CurrencyRepository>();
+    await repository.deleteHistoryItem(id);
+    await _loadHistory();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conversion log removed'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   String _formatRelativeTime(DateTime time) {
     final diff = DateTime.now().difference(time);
@@ -104,22 +61,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _clearAllHistory() {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
+        title: Text(
           'Clear Conversion Logs?',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
         ),
-        content: const Text(
-          'This will remove all recent conversion history logs from your device.',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        content: Text(
+          'This will remove all conversion history logs from your device storage.',
+          style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 14),
         ),
         actions: [
           TextButton(
@@ -127,15 +85,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() => _history.clear());
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Conversion history cleared'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              final repository = context.read<CurrencyRepository>();
+              await repository.clearHistory();
+              await _loadHistory();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Conversion history cleared'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.deltaNegative,
@@ -151,23 +113,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _history.where((item) {
-      if (_filterQuery.isEmpty) return true;
-      final q = _filterQuery.toUpperCase();
-      return item.fromCurrency.contains(q) ||
-          item.toCurrency.contains(q) ||
-          '${item.fromAmount}'.contains(q) ||
-          '${item.toAmount}'.contains(q);
-    }).toList();
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final scaffoldBg = theme.scaffoldBackgroundColor;
+    final surfaceColor = isLight ? Colors.white : theme.cardColor;
+    final primaryColor = theme.colorScheme.primary;
+    final primaryLightColor = theme.colorScheme.secondary;
+    final borderColor = isLight
+        ? Colors.black.withValues(alpha: 0.06)
+        : theme.dividerColor;
+
+    final filtered = _filterQuery.isEmpty
+        ? _history
+        : _history.where((item) {
+            final q = _filterQuery.toLowerCase();
+            return item.fromCurrency.toLowerCase().contains(q) ||
+                item.toCurrency.toLowerCase().contains(q) ||
+                item.fromAmount.toString().contains(q) ||
+                item.toAmount.toString().contains(q);
+          }).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: scaffoldBg,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Conversion History',
           style: TextStyle(
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w800,
             fontSize: 20,
             letterSpacing: -0.4,
@@ -178,89 +152,158 @@ class _HistoryScreenState extends State<HistoryScreen> {
             IconButton(
               onPressed: _clearAllHistory,
               icon: const Icon(
-                Icons.delete_sweep_rounded,
+                CupertinoIcons.trash,
                 color: AppColors.textSecondary,
-                size: 22,
+                size: 20,
               ),
               tooltip: 'Clear history',
             ),
         ],
       ),
-      body: filtered.isEmpty && _history.isEmpty
-          ? _buildEmptyState()
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-              children: [
-                // 1. Search Bar
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
-                  child: TextField(
-                    onChanged: (val) => setState(() => _filterQuery = val.trim()),
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+      body: RefreshIndicator(
+        onRefresh: _loadHistory,
+        color: primaryLightColor,
+        backgroundColor: surfaceColor,
+        child: filtered.isEmpty && _history.isEmpty
+            ? _buildEmptyState(surfaceColor, borderColor)
+            : ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                children: [
+                  // 1. Search Bar with dynamic theme styling and soft muted hint text
+                  Container(
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor, width: 1.0),
                     ),
-                    decoration: const InputDecoration(
-                      icon: Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
-                      hintText: 'Search by currency code or amount...',
-                      hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // 2. Summary stats header
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildMiniStat(
-                        title: 'Total Logs',
-                        value: '${_history.length}',
-                        icon: Icons.receipt_long_rounded,
+                    child: TextField(
+                      onChanged: (val) => setState(() => _filterQuery = val.trim()),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      cursorColor: primaryLightColor,
+                      decoration: InputDecoration(
+                        icon: Padding(
+                          padding: const EdgeInsets.only(left: 14),
+                          child: Icon(
+                            CupertinoIcons.search,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            size: 18,
+                          ),
+                        ),
+                        hintText: 'Search by currency code or amount...',
+                        hintStyle: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 14,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildMiniStat(
-                        title: 'Top Pair',
-                        value: 'USD / EUR',
-                        icon: Icons.swap_horiz_rounded,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                const Text(
-                  'RECENT LOGS',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: AppColors.textSecondary,
                   ),
-                ),
-                const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
-                ...filtered.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildHistoryCard(item),
-                    )),
-              ],
-            ),
+                  // 2. Summary stats header
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildMiniStat(
+                          surfaceColor: surfaceColor,
+                          borderColor: borderColor,
+                          primaryColor: primaryColor,
+                          primaryLightColor: primaryLightColor,
+                          title: 'Total Logs',
+                          value: '${_history.length}',
+                          icon: CupertinoIcons.doc_text,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMiniStat(
+                          surfaceColor: surfaceColor,
+                          borderColor: borderColor,
+                          primaryColor: primaryColor,
+                          primaryLightColor: primaryLightColor,
+                          title: 'Top Pair',
+                          value: _getTopPair(),
+                          icon: CupertinoIcons.arrow_right_arrow_left,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'RECENT LOGS',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  if (filtered.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Text(
+                          'No conversions found matching "$_filterQuery"',
+                          style: const TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    )
+                  else
+                    ...filtered.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildHistoryCard(
+                            item: item,
+                            surfaceColor: surfaceColor,
+                            borderColor: borderColor,
+                            primaryLightColor: primaryLightColor,
+                          ),
+                        )),
+                ],
+              ),
+      ),
     );
   }
 
+  String _getTopPair() {
+    if (_history.isEmpty) return 'None';
+    final counts = <String, int>{};
+    for (final h in _history) {
+      final key = '${h.fromCurrency}/${h.toCurrency}';
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    var top = 'USD / EUR';
+    var maxCount = 0;
+    for (final entry in counts.entries) {
+      if (entry.value > maxCount) {
+        maxCount = entry.value;
+        top = entry.key;
+      }
+    }
+    return top;
+  }
+
   Widget _buildMiniStat({
+    required Color surfaceColor,
+    required Color borderColor,
+    required Color primaryColor,
+    required Color primaryLightColor,
     required String title,
     required String value,
     required IconData icon,
@@ -268,62 +311,71 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.15),
+              color: primaryColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 18, color: AppColors.primaryLight),
+            child: Icon(icon, size: 18, color: primaryLightColor),
           ),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHistoryCard(HistoryItem item) {
+  Widget _buildHistoryCard({
+    required ConversionHistoryModel item,
+    required Color surfaceColor,
+    required Color borderColor,
+    required Color primaryLightColor,
+  }) {
     final fromFlag = FlagCode.fromCurrencyCode(item.fromCurrency);
     final toFlag = FlagCode.fromCurrencyCode(item.toCurrency);
     final fromCountry = kCurrencyData[item.fromCurrency]?.countryCode ??
-        item.fromCurrency.substring(0, 2);
+        item.fromCurrency.substring(0, item.fromCurrency.length > 2 ? 2 : item.fromCurrency.length);
     final toCountry = kCurrencyData[item.toCurrency]?.countryCode ??
-        item.toCurrency.substring(0, 2);
+        item.toCurrency.substring(0, item.toCurrency.length > 2 ? 2 : item.toCurrency.length);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder, width: 1.1),
+        border: Border.all(color: borderColor, width: 1.1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.2),
@@ -349,7 +401,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.surface, width: 1.5),
+                              border: Border.all(color: surfaceColor, width: 1.5),
                             ),
                             child: ClipOval(
                               child: SizedBox(
@@ -373,7 +425,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.surface, width: 1.5),
+                              border: Border.all(color: surfaceColor, width: 1.5),
                             ),
                             child: ClipOval(
                               child: SizedBox(
@@ -398,22 +450,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   const SizedBox(width: 8),
                   Text(
                     '${item.fromCurrency} → ${item.toCurrency}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.2,
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
-              Text(
-                _formatRelativeTime(item.timestamp),
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  fontWeight: FontWeight.w500,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatRelativeTime(item.timestamp),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: () => _deleteItem(item.id),
+                    icon: Icon(
+                      CupertinoIcons.xmark_circle,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    tooltip: 'Delete log',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                  ),
+                ],
               ),
             ],
           ),
@@ -427,20 +496,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 children: [
                   Text(
                     '${item.fromAmount.toStringAsFixed(0)} ${item.fromCurrency} =',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${item.toAmount.toStringAsFixed(2)} ${item.toCurrency}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
-                      color: AppColors.primaryLight,
+                      color: primaryLightColor,
                     ),
                   ),
                 ],
@@ -462,7 +531,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.copy_rounded, size: 18, color: AppColors.textSecondary),
+                    icon: const Icon(CupertinoIcons.doc_on_doc, size: 18, color: AppColors.textSecondary),
                     tooltip: 'Copy',
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
@@ -481,7 +550,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.primaryLight),
+                    icon: Icon(CupertinoIcons.arrow_2_circlepath, size: 18, color: primaryLightColor),
                     tooltip: 'Re-convert',
                     constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
@@ -494,7 +563,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(Color surfaceColor, Color borderColor) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -504,32 +573,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: surfaceColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.cardBorder),
+                border: Border.all(color: borderColor),
               ),
               child: const Icon(
-                Icons.history_rounded,
+                CupertinoIcons.clock,
                 size: 48,
                 color: AppColors.textMuted,
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'No Conversion History',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Conversions performed on the Home dashboard will automatically appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
             ),

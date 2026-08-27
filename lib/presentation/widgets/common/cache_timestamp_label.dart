@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -27,8 +28,8 @@ class CacheTimestampLabel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          isFromCache ? Icons.cloud_off_rounded : Icons.bolt_rounded,
-          size: 14,
+          isFromCache ? CupertinoIcons.cloud_bolt : CupertinoIcons.bolt_fill,
+          size: 13,
           color: isFromCache ? AppColors.warning : AppColors.success,
         ),
         const SizedBox(width: 4),
