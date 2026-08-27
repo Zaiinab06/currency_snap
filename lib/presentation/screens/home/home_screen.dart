@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,12 +16,14 @@ import '../../widgets/home/swap_button.dart';
 import '../historical_rates/historical_rate_chart_screen.dart';
 import '../rates/rates_screen.dart';
 
-/// Main Midnight Neon Purple Converter Dashboard:
+/// Main Converter Dashboard with dynamic theme palette reactivity:
 /// - Greeting header ("Hello, Zainab 👋")
 /// - Vertical column live exchange rate status & full visible timestamp
-/// - Stacked midnight input cards with centered neon purple swap button
-/// - Comma-separated large number formatting for input and output amounts
+/// - Stacked input cards with centered animated swap button
+/// - Thousands separator input formatting with precise cursor positioning
+/// - Dismiss focus/cursor on tap outside anywhere
 /// - Quick preset amount pills (100, 500, 1000, 5000)
+/// - "Save Pair" animated feedback for 1.2s
 /// - "Popular Pairs" horizontal preview cards at bottom with 130px bottom clearance
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,6 +35,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const List<double> _presetAmounts = [100, 500, 1000, 5000];
   late final TextEditingController _amountController;
+  bool _isSavedPairActive = false;
+  Timer? _savePairTimer;
 
   static const List<(String, String)> _popularPairs = [
     ('USD', 'EUR'),
@@ -55,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _savePairTimer?.cancel();
     _amountController.dispose();
     super.dispose();
   }
@@ -77,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       cubit.changeTargetCurrency(picked);
     }
+    cubit.recordCurrentConversion();
   }
 
   double _getPairDelta(String from, String to) {
@@ -87,42 +94,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: BlocConsumer<ConvertCubit, ConvertState>(
-          listener: (context, state) {
-            if (state is ConvertLoaded) {
-              final parsed = CurrencyFormatter.parseAmount(_amountController.text);
-              if ((parsed - state.amount).abs() > 0.001) {
-                final formattedAmount = CurrencyFormatter.formatInputAmount(state.amount);
-                _amountController.text = formattedAmount;
-                _amountController.selection = TextSelection.fromPosition(
-                  TextPosition(offset: _amountController.text.length),
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: BlocConsumer<ConvertCubit, ConvertState>(
+            listener: (context, state) {
+              if (state is ConvertLoaded) {
+                final parsed = CurrencyFormatter.parseAmount(_amountController.text);
+                if ((parsed - state.amount).abs() > 0.001) {
+                  final formattedAmount = CurrencyFormatter.formatInputAmount(state.amount);
+                  _amountController.text = formattedAmount;
+                  _amountController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _amountController.text.length),
+                  );
+                }
+              }
+            },
+            builder: (context, state) {
+              if (state is ConvertLoading || state is ConvertInitial) {
+                return const LoadingIndicator();
+              }
+              if (state is ConvertError) {
+                return ErrorBanner(
+                  message: state.message,
+                  onRetry: () => context.read<ConvertCubit>().loadRates(),
                 );
               }
-            }
-          },
-          builder: (context, state) {
-            if (state is ConvertLoading || state is ConvertInitial) {
-              return const LoadingIndicator();
-            }
-            if (state is ConvertError) {
-              return ErrorBanner(
-                message: state.message,
-                onRetry: () => context.read<ConvertCubit>().loadRates(),
-              );
-            }
-            final loaded = state as ConvertLoaded;
-            return _buildLoadedContent(context, loaded);
-          },
+              final loaded = state as ConvertLoaded;
+              return _buildLoadedContent(context, loaded);
+            },
+          ),
         ),
       ),
     );
   }
 
   Widget _buildLoadedContent(BuildContext context, ConvertLoaded state) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final primaryLightColor = theme.colorScheme.secondary;
+    final surfaceColor = theme.cardColor;
+    final borderColor = theme.dividerColor;
     final cubit = context.read<ConvertCubit>();
+
     final unitRate = state.rates.convertBetween(
           fromCurrency: state.fromCurrency,
           toCurrency: state.toCurrency,
@@ -131,7 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
         0.0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 130),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -212,17 +232,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(4),
                       child: state.isRefreshing
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 14,
                               height: 14,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: AppColors.primaryLight,
+                                color: primaryLightColor,
                               ),
                             )
-                          : const Icon(
+                          : Icon(
                               Icons.refresh_rounded,
-                              color: AppColors.primaryLight,
+                              color: primaryLightColor,
                               size: 16,
                             ),
                     ),
@@ -250,9 +270,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.cardBorder, width: 1.0),
+                  border: Border.all(color: borderColor, width: 1.0),
                 ),
                 child: Row(
                   children: _presetAmounts.map((preset) {
@@ -266,6 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             TextPosition(offset: _amountController.text.length),
                           );
                           cubit.updateAmount(preset);
+                          cubit.recordCurrentConversion();
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(
@@ -273,12 +294,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           curve: Curves.easeInOut,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary : Colors.transparent,
+                            color: isSelected ? primaryColor : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: AppColors.primary.withValues(alpha: 0.4),
+                                      color: primaryColor.withValues(alpha: 0.4),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -307,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 3. Stacked Midnight Input Cards with Centered Neon Purple Animated Swap Button
+          // 3. Stacked Midnight Input Cards with Centered Animated Swap Button
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -345,7 +366,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: 92,
                 left: 0,
                 right: 0,
-                child: Center(child: SwapButton(onTap: cubit.swapCurrencies)),
+                child: Center(
+                  child: SwapButton(
+                    onTap: () {
+                      cubit.swapCurrencies();
+                      cubit.recordCurrentConversion();
+                    },
+                  ),
+                ),
               ),
             ],
           ),
@@ -356,20 +384,20 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.surfaceAlt.withValues(alpha: 0.7),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.2),
+                  color: primaryColor.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline_rounded,
                     size: 14,
-                    color: AppColors.primaryLight,
+                    color: primaryLightColor,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -390,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // 5. Action Button Hierarchy (Primary: View Rate Trend, Secondary: Save Pair)
           Row(
             children: [
-              // Primary Action (Left): Filled Neon Purple Button -> "View Rate Trend"
+              // Primary Action (Left): Filled Themed Button -> "View Rate Trend"
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
@@ -411,14 +439,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   label: const Text('View Rate Trend'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 4,
-                    shadowColor: AppColors.primary.withValues(alpha: 0.5),
+                    shadowColor: primaryColor.withValues(alpha: 0.5),
                     textStyle: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
@@ -427,10 +455,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Secondary Action (Right): Outlined / Ghost Button -> "Save Pair"
+              // Secondary Action (Right): Animated Feedback Outlined Button -> "Save Pair"
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
+                    setState(() {
+                      _isSavedPairActive = true;
+                    });
+                    _savePairTimer?.cancel();
+                    _savePairTimer = Timer(const Duration(milliseconds: 1200), () {
+                      if (mounted) {
+                        setState(() {
+                          _isSavedPairActive = false;
+                        });
+                      }
+                    });
+
                     await cubit.saveCurrentPairToFavorites();
                     if (context.mounted) {
                       context.read<FavoritesCubit>().loadFavorites();
@@ -439,28 +479,42 @@ class _HomeScreenState extends State<HomeScreen> {
                           content: Text(
                             '${state.fromCurrency}/${state.toCurrency} saved to favorites',
                           ),
-                          duration: const Duration(seconds: 2),
+                          duration: const Duration(milliseconds: 1200),
                         ),
                       );
                     }
                   },
-                  icon: const Icon(
-                    Icons.star_border_rounded,
-                    size: 18,
-                    color: AppColors.primaryLight,
+                  icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                    child: Icon(
+                      _isSavedPairActive ? Icons.star_rounded : Icons.star_border_rounded,
+                      key: ValueKey(_isSavedPairActive),
+                      size: 18,
+                      color: _isSavedPairActive ? primaryColor : primaryLightColor,
+                    ),
                   ),
-                  label: const Text('Save Pair'),
+                  label: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 250),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: _isSavedPairActive ? primaryColor : primaryLightColor,
+                    ),
+                    child: Text(_isSavedPairActive ? 'Saved Pair!' : 'Save Pair'),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primaryLight,
-                    backgroundColor: AppColors.surface,
-                    side: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+                    foregroundColor: _isSavedPairActive ? primaryColor : primaryLightColor,
+                    backgroundColor: _isSavedPairActive
+                        ? primaryColor.withValues(alpha: 0.16)
+                        : surfaceColor,
+                    side: BorderSide(
+                      color: _isSavedPairActive ? primaryColor : borderColor,
+                      width: _isSavedPairActive ? 1.6 : 1.2,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                    ),
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -474,14 +528,14 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                children: const [
+                children: [
                   Icon(
                     Icons.local_fire_department_rounded,
                     size: 18,
-                    color: AppColors.primaryLight,
+                    color: primaryLightColor,
                   ),
-                  SizedBox(width: 6),
-                  Text(
+                  const SizedBox(width: 6),
+                  const Text(
                     'POPULAR PAIRS',
                     style: TextStyle(
                       fontSize: 12,
@@ -501,14 +555,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
                 borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   child: Text(
                     'See All',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.primaryLight,
+                      color: primaryLightColor,
                     ),
                   ),
                 ),
@@ -547,15 +601,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       cubit.changeSourceCurrency(pairFrom);
                       cubit.changeTargetCurrency(pairTo);
+                      cubit.recordCurrentConversion();
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       width: 168,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: surfaceColor,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.cardBorder, width: 1.2),
+                        border: Border.all(color: borderColor, width: 1.2),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.25),
@@ -582,7 +637,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: AppColors.surface,
+                                            color: surfaceColor,
                                             width: 1.5,
                                           ),
                                         ),
@@ -609,7 +664,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: AppColors.surface,
+                                            color: surfaceColor,
                                             width: 1.5,
                                           ),
                                         ),
@@ -674,10 +729,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 rate > 100
                                     ? rate.toStringAsFixed(2)
                                     : rate.toStringAsFixed(4),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryLight,
+                                  color: primaryLightColor,
                                 ),
                               ),
                             ],
@@ -690,7 +745,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
 
           // 7. Footer disclaimer micro-text
           Text(
@@ -707,5 +762,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-

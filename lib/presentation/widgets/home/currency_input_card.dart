@@ -1,10 +1,10 @@
 import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../bottom_sheets/currency_picker_sheet.dart';
 
-/// The dual-contrast card used for "From" (#14152D) and "To" (#1B1C38)
-/// rows on the Home/Converter screen in Midnight Neon Purple theme.
+/// The dual-contrast card used for "From" and "To" rows on the Home/Converter screen with dynamic theming.
 class CurrencyInputCard extends StatefulWidget {
   final String label;
   final String currencyCode;
@@ -66,9 +66,10 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isDark = widget.isDark;
-    final cardBg = isDark ? AppColors.surfaceAlt : AppColors.surface;
-    final cardBorder = isDark ? AppColors.borderHighlight : AppColors.cardBorder;
+    final cardBg = isDark ? theme.colorScheme.surfaceContainerHighest : theme.cardColor;
+    final cardBorder = isDark ? theme.colorScheme.outlineVariant : theme.dividerColor;
     const labelColor = AppColors.textSecondary;
     const amountColor = AppColors.textPrimary;
 
@@ -114,6 +115,10 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
                           letterSpacing: -0.8,
                           color: amountColor,
                         ),
+                        inputFormatters: [
+                          ThousandsSeparatorInputFormatter(),
+                        ],
+                        cursorColor: theme.colorScheme.secondary,
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
@@ -164,16 +169,17 @@ class _CurrencyPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final flagCode = FlagCode.fromCurrencyCode(code);
     final countryCode = kCurrencyData[code]?.countryCode ??
         code.substring(0, code.length > 2 ? 2 : code.length);
 
     final pillBg = isDark
-        ? AppColors.surfaceElevated
-        : AppColors.surfaceAlt;
+        ? theme.colorScheme.surfaceContainerHighest
+        : theme.cardColor;
     final pillBorder = isDark
-        ? AppColors.primary.withValues(alpha: 0.3)
-        : AppColors.borderHighlight;
+        ? theme.colorScheme.primary.withValues(alpha: 0.3)
+        : theme.dividerColor;
     const textColor = AppColors.textPrimary;
     const arrowColor = AppColors.textSecondary;
 
@@ -202,7 +208,7 @@ class _CurrencyPill extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.borderHighlight, width: 1),
+                  border: Border.all(color: theme.colorScheme.outlineVariant, width: 1),
                 ),
                 child: ClipOval(
                   child: SizedBox(
@@ -243,5 +249,3 @@ class _CurrencyPill extends StatelessWidget {
     );
   }
 }
-
-

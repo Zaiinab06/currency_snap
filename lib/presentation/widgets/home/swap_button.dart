@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
 
 /// The floating centered circular swap button with rotation animation,
-/// glowing Neon Purple fintech styling, and comfortable 48x48 tap target.
+/// dynamic theme styling, and comfortable 48x48 tap target.
 class SwapButton extends StatefulWidget {
   final VoidCallback onTap;
 
@@ -45,12 +44,17 @@ class _SwapButtonState extends State<SwapButton> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final primaryLightColor = theme.colorScheme.secondary;
+    final bgColor = theme.scaffoldBackgroundColor;
+
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.55),
+            color: primaryColor.withValues(alpha: 0.55),
             blurRadius: 18,
             spreadRadius: 1,
             offset: const Offset(0, 4),
@@ -64,14 +68,14 @@ class _SwapButtonState extends State<SwapButton> with SingleTickerProviderStateM
       ),
       child: Material(
         color: Colors.transparent,
-        shape: const CircleBorder(
-          side: BorderSide(color: AppColors.background, width: 3.5),
+        shape: CircleBorder(
+          side: BorderSide(color: bgColor, width: 3.5),
         ),
         child: Ink(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: [AppColors.primaryLight, AppColors.primary],
+              colors: [primaryLightColor, primaryColor],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -97,5 +101,3 @@ class _SwapButtonState extends State<SwapButton> with SingleTickerProviderStateM
     );
   }
 }
-
-
