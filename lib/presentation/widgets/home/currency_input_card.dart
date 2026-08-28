@@ -13,6 +13,7 @@ class CurrencyInputCard extends StatefulWidget {
   final bool isEditable;
   final bool isDark;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String>? onAmountChanged;
   final VoidCallback onCurrencyTap;
 
@@ -25,6 +26,7 @@ class CurrencyInputCard extends StatefulWidget {
     this.isEditable = false,
     this.isDark = false,
     this.controller,
+    this.focusNode,
     this.onAmountChanged,
   });
 
@@ -122,6 +124,7 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
                 child: widget.isEditable
                     ? TextField(
                         controller: _controller,
+                        focusNode: widget.focusNode,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),

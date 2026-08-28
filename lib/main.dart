@@ -12,10 +12,12 @@ import 'bloc/convert/convert_cubit.dart';
 import 'bloc/favorites/favorites_cubit.dart';
 import 'bloc/settings/settings_cubit.dart';
 import 'bloc/settings/settings_state.dart';
+import 'core/services/widget_service.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  WidgetService.initialize();
   final prefs = await SharedPreferences.getInstance();
   runApp(CurrencySnapApp(prefs: prefs));
 }

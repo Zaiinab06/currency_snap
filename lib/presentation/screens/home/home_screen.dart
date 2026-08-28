@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../bloc/convert/convert_cubit.dart';
 import '../../../bloc/convert/convert_state.dart';
 import '../../../bloc/favorites/favorites_cubit.dart';
+import '../../../core/services/widget_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_time_formatter.dart';
@@ -28,6 +29,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const List<double> _presetAmounts = [100, 500, 1000, 5000];
   late final TextEditingController _amountController;
+  late final FocusNode _amountFocusNode;
+  StreamSubscription<bool>? _autoFocusSub;
+  bool _pendingAutoFocus = false;
   bool _isSavedPairActive = false;
   Timer? _savePairTimer;
 
@@ -48,13 +52,52 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _amountController = TextEditingController(text: '100');
+    _amountFocusNode = FocusNode();
     context.read<ConvertCubit>().loadRates();
+    _initAutoFocus();
+  }
+
+  void _initAutoFocus() {
+    _autoFocusSub = WidgetService.autoFocusStream.listen((shouldFocus) {
+      if (shouldFocus && mounted) {
+        _triggerAmountAutoFocus();
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shouldFocus = await WidgetService.checkAutoFocusIntent();
+      if (shouldFocus && mounted) {
+        _triggerAmountAutoFocus();
+      }
+    });
+  }
+
+  void _triggerAmountAutoFocus() {
+    _pendingAutoFocus = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = context.read<ConvertCubit>().state;
+      if (state is ConvertLoaded) {
+        _pendingAutoFocus = false;
+        if (!_amountFocusNode.hasFocus) {
+          _amountFocusNode.requestFocus();
+        }
+        if (_amountController.text.isNotEmpty) {
+          _amountController.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _amountController.text.length,
+          );
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _autoFocusSub?.cancel();
     _savePairTimer?.cancel();
     _amountController.dispose();
+    _amountFocusNode.dispose();
     super.dispose();
   }
 
@@ -98,6 +141,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BlocConsumer<ConvertCubit, ConvertState>(
             listener: (context, state) {
               if (state is ConvertLoaded) {
+                if (_pendingAutoFocus) {
+                  _triggerAmountAutoFocus();
+                }
                 final parsed = CurrencyFormatter.parseAmount(
                   _amountController.text,
                 );
@@ -361,6 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       state.amount,
                     ),
                     controller: _amountController,
+                    focusNode: _amountFocusNode,
                     isEditable: true,
                     isDark: false,
                     onAmountChanged: (value) {

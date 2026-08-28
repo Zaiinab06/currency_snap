@@ -65,8 +65,8 @@ class SettingsState extends Equatable {
 
   @override
   List<Object?> get props => [
-        themeMode,
-        defaultBaseCurrency,
-        defaultTargetCurrency,
-      ];
+    themeMode,
+    defaultBaseCurrency,
+    defaultTargetCurrency,
+  ];
 }
