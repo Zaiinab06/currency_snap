@@ -12,9 +12,24 @@
 
 ## 🌟 Overview
 
-**CurrencySnap** is a production-grade, offline-first fintech currency converter and rate analytics application built with **Flutter** and **Clean Architecture**. Designed with an **Obsidian Dark & Neon Purple/Indigo Design System** (`#0B0C1E`, `#6C5CE7`), it combines high-contrast financial surface cards, Apple Human Interface Guidelines (HIG) touch ergonomics, and an **Interactive Native Android Home Screen Widget**.
+**CurrencySnap** is a production-grade, offline-first fintech currency converter and rate analytics application built with **Flutter** and **Clean Architecture**. Designed with an **Obsidian Dark & Neon Purple/Indigo Design System**, it combines high-contrast financial surface cards, Apple Human Interface Guidelines (HIG) touch ergonomics, and an **Interactive Native Android Home Screen Widget** with direct Tap-to-Edit deep linking.
 
 The app features a resilient local caching layer, real-time mid-market rate calculation across 160+ world currencies, national flag integration, a favorites watchlist, and 7-day historical rate trend charts.
+
+---
+
+## 🎨 Obsidian Dark Design System
+
+| Token | Hex Value | Purpose |
+|---|---|---|
+| **Scaffold Background** | `#0B0C1E` | Ultra-dark midnight scaffold background |
+| **Card Surface** | `#14152D` | Primary surface background for converted cards & lists |
+| **Input Card Surface** | `#1B1C38` | High-contrast secondary background for amount inputs |
+| **Primary Accent** | `#6C5CE7` | Electric neon purple for primary CTA buttons & active indicators |
+| **Secondary Accent** | `#8C7CFF` | Vibrant lavender for icons, subtitles, and interactive pills |
+| **Live Indicator** | `#00E676` | Radiant neon green for live API rate sync badge |
+| **Warning / Cached** | `#FFB300` | Amber gold for offline cached rate notifications |
+| **Reset / Destructive** | `#FF5252` | Vivid coral red for widget reset actions & removal |
 
 ---
 
@@ -25,11 +40,13 @@ The app features a resilient local caching layer, real-time mid-market rate calc
   - Live currency pair rates and calculation engine directly on the home screen.
   - Interactive stepper buttons (`+10`, `+50`, `+100`, and Reset `C`) without launching the app.
   - Dynamic currency swapping (`⇄`) with real-time reciprocal rates.
-- **🗂️ 2-Column Currency Picker Sheet**: Keyboard-safe modal bottom sheet featuring circular national flags (`country_flags`) and multi-field search (by currency code, currency name, or country name).
+  - **Tap-to-Edit Deep Link**: Tapping the conversion display opens the Flutter app and auto-focuses the numeric keyboard on the amount input field.
+  - Real-time two-way synchronization between app input changes and widget state.
+- **🗂️ 2-Column Currency Picker Sheet**: Keyboard-safe modal bottom sheet featuring circular national flags (`country_flags`) and multi-field search (by currency code, full currency name, or country name).
 - **💾 Offline-First Architecture**: Transparent fallback to cached rates via `SharedPreferences` when offline, with sync freshness indicators.
-- **⭐ Saved Pairs Watchlist**: Instant bookmarking of frequently converted currency pairs with live unit conversion rates.
+- **⭐ Saved Pairs Watchlist**: Instant bookmarking of frequently converted currency pairs with live unit conversion rates and relative update timestamps.
 - **📈 7-Day Trend Analytics**: Visual rate trend analytics with interactive sparkline charts powered by `fl_chart`.
-- **🎯 Obsidian Dark Design System**: High-contrast dark tokens (`#0B0C1E` Scaffold, `#14152D` Surface, `#1B1C38` Input, `#6C5CE7` Accent Glow) with tabular numeric typography alignment.
+- **⚙️ Apple HIG Grouped Settings**: Grouped inset cards for managing default base/target currencies, theme appearance, and one-tap offline cache clearing.
 
 ---
 
@@ -82,6 +99,7 @@ CurrencySnap adheres strictly to **Clean Architecture** principles and the **BLo
 | **`fl_chart`** | Customizable chart engine for 7-day historical rate trends |
 | **`country_flags`** | Vector-sharp circular country and regional flag rendering |
 | **`intl`** | Number and currency formatting utilities |
+| **`connectivity_plus`** | Network state detection for live vs. cached data indication |
 
 ---
 
@@ -90,31 +108,35 @@ CurrencySnap adheres strictly to **Clean Architecture** principles and the **BLo
 ```plaintext
 lib/
 ├── bloc/
-│   ├── convert/          # ConvertCubit & ConvertState
-│   ├── favorites/        # FavoritesCubit & FavoritesState
-│   └── settings/         # SettingsCubit & SettingsState
+│   ├── convert/              # ConvertCubit & ConvertState
+│   ├── favorites/            # FavoritesCubit & FavoritesState
+│   └── settings/             # SettingsCubit & SettingsState
 ├── core/
-│   ├── constants/        # AppConstants & endpoints
-│   ├── services/         # WidgetService (HomeWidget sync)
-│   └── theme/            # AppColors (Obsidian palette) & AppTheme
+│   ├── constants/            # AppConstants & Currency mappings
+│   ├── errors/               # AppExceptions & error handling
+│   ├── network/              # DioClient & HTTP configuration
+│   ├── services/             # WidgetService (HomeWidget sync & deep link)
+│   ├── theme/                # AppColors (Obsidian palette) & AppTheme
+│   └── utils/                # CurrencyFormatter & DateTimeFormatter
 ├── data/
 │   ├── datasources/
-│   │   ├── local/        # CurrencyCacheDataSource & FavoritesLocalDataSource
-│   │   └── remote/       # CurrencyRemoteDataSource (Dio)
-│   ├── models/           # CurrencyRateModel & FavoritePairModel
-│   └── repositories/     # CurrencyRepository
+│   │   ├── local/            # CurrencyCacheDataSource & FavoritesLocalDataSource
+│   │   └── remote/           # CurrencyRemoteDataSource (Dio)
+│   ├── models/               # CurrencyRateModel, FavoritePairModel, HistoryModel
+│   └── repositories/         # CurrencyRepository
 ├── presentation/
-│   ├── bottom_sheets/    # CurrencyPickerSheet (2-column flag grid)
-│   ├── navigation/       # AppBottomNav (IndexedStack tab bar)
+│   ├── bottom_sheets/        # CurrencyPickerSheet (2-column flag grid)
+│   ├── navigation/           # AppBottomNav (IndexedStack tab bar)
 │   ├── screens/
-│   │   ├── favorites/    # FavoritesScreen (Watchlist)
+│   │   ├── favorites/        # FavoritesScreen (Watchlist)
 │   │   ├── historical_rates/ # HistoricalRateChartScreen
-│   │   ├── home/         # HomeScreen (Converter Dashboard)
-│   │   ├── settings/     # SettingScreen (Grouped settings)
-│   │   └── splash/       # SplashScreen (Brand intro)
-│   └── widgets/          # Common, Home, Favorites, and Chart widgets
-├── routes/               # AppRouter named routes
-└── main.dart             # App entrypoint & MultiBlocProvider
+│   │   ├── history/          # HistoryScreen (Conversion logs)
+│   │   ├── home/             # HomeScreen (Converter Dashboard)
+│   │   ├── rates/            # RatesScreen (All rates overview)
+│   │   ├── settings/         # SettingScreen (Grouped settings)
+│   │   └── splash/           # SplashScreen (Brand intro)
+│   └── widgets/              # Common, Home, Favorites, and Chart widgets
+└── main.dart                 # App entrypoint & MultiBlocProvider
 ```
 
 ---
@@ -155,4 +177,3 @@ lib/
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
