@@ -59,6 +59,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
           onDestinationSelected: (index) {
             if (_currentIndex != index) {
               HapticFeedback.selectionClick();
+              FocusScope.of(context).unfocus();
               setState(() {
                 _currentIndex = index;
               });

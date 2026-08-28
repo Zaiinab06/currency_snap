@@ -102,6 +102,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _pickCurrency({required bool isSource}) async {
+    FocusScope.of(context).unfocus();
+    _pendingAutoFocus = false;
     final cubit = context.read<ConvertCubit>();
     final state = cubit.state;
     if (state is! ConvertLoaded) return;
@@ -201,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -338,6 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: InkWell(
                         onTap: () {
                           HapticFeedback.selectionClick();
+                          FocusScope.of(context).unfocus();
                           _amountController.text = presetDisplay;
                           _amountController
                               .selection = TextSelection.fromPosition(
@@ -437,6 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Center(
                   child: SwapButton(
                     onTap: () {
+                      FocusScope.of(context).unfocus();
                       cubit.swapCurrencies();
                       cubit.recordCurrentConversion();
                     },
@@ -506,6 +511,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     HapticFeedback.lightImpact();
+                    FocusScope.of(context).unfocus();
+                    _pendingAutoFocus = false;
                     Navigator.of(context).push(
                       CupertinoPageRoute(
                         builder: (_) => HistoricalRateChartScreen(
@@ -544,6 +551,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     HapticFeedback.lightImpact();
+                    FocusScope.of(context).unfocus();
                     setState(() {
                       _isSavedPairActive = true;
                     });
@@ -648,6 +656,8 @@ class _HomeScreenState extends State<HomeScreen> {
               InkWell(
                 onTap: () {
                   HapticFeedback.selectionClick();
+                  FocusScope.of(context).unfocus();
+                  _pendingAutoFocus = false;
                   Navigator.of(context).push(
                     CupertinoPageRoute(
                       builder: (_) => RatesScreen(
@@ -712,6 +722,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: InkWell(
                     onTap: () {
                       HapticFeedback.selectionClick();
+                      FocusScope.of(context).unfocus();
                       cubit.changeSourceCurrency(pairFrom);
                       cubit.changeTargetCurrency(pairTo);
                       cubit.recordCurrentConversion();
