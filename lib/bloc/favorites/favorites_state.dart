@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../data/models/favourite_pair_model.dart';
+import '../../data/models/favorite_pair_model.dart';
 
 /// Status representing the lifecycle of favorites loading and operations.
 enum FavoritesStatus { initial, loading, success, failure }

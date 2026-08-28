@@ -2,7 +2,7 @@ import 'package:country_flags/country_flags.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/models/favourite_pair_model.dart';
+import '../../../data/models/favorite_pair_model.dart';
 import '../../bottom_sheets/currency_picker_sheet.dart';
 
 /// Elevated card tile rendering a saved favorite currency pair with dual flag avatars,

@@ -1,5 +1,5 @@
 import '../models/currency_rate_model.dart';
-import '../models/favourite_pair_model.dart';
+import '../models/favorite_pair_model.dart';
 import '../models/conversion_history_model.dart';
 import '../datasources/remote/currency_remote_datasource.dart';
 import '../datasources/local/currency_cache_datasource.dart';

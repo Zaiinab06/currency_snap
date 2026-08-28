@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../models/favourite_pair_model.dart';
+import '../../models/favorite_pair_model.dart';
 import '../../../core/constants/app_constants.dart';
 
 /// Local data source responsible for persisting and managing favorite currency pairs.

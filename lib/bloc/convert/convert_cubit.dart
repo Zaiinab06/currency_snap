@@ -1,4 +1,4 @@
-import 'package:currency_snap/data/models/favourite_pair_model.dart';
+import 'package:currency_snap/data/models/favorite_pair_model.dart';
 import 'package:currency_snap/data/models/conversion_history_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_constants.dart';

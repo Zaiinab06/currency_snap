@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/favourite_pair_model.dart';
+import '../../data/models/favorite_pair_model.dart';
 import '../../data/repositories/currency_repository.dart';
 import 'favorites_state.dart';
 
