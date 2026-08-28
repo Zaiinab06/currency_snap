@@ -12,7 +12,7 @@
 
 ## 🌟 Overview
 
-**CurrencySnap** is a production-grade, offline-first fintech currency converter and rate analytics application built with **Flutter** and **Clean Architecture**. Designed following the **Google Stitch Design System**, it combines a deep forest green palette (`#163300`) with high-energy lime accents (`#9FE870`), surface cards, and Apple Human Interface Guidelines (HIG) touch ergonomics.
+**CurrencySnap** is a production-grade, offline-first fintech currency converter and rate analytics application built with **Flutter** and **Clean Architecture**. Designed with an **Obsidian Dark & Neon Purple/Indigo Design System** (`#0B0C1E`, `#6C5CE7`), it combines high-contrast financial surface cards, Apple Human Interface Guidelines (HIG) touch ergonomics, and an **Interactive Native Android Home Screen Widget**.
 
 The app features a resilient local caching layer, real-time mid-market rate calculation across 160+ world currencies, national flag integration, a favorites watchlist, and 7-day historical rate trend charts.
 
@@ -21,23 +21,26 @@ The app features a resilient local caching layer, real-time mid-market rate calc
 ## ✨ Key Features
 
 - **⚡ Live Mid-Market Conversions**: Real-time rate calculation across 160+ global currencies using an anchor-based cross-rate engine (`from / anchor * to`).
-- **🗂️ 2-Column Currency Picker Sheet**: Keyboard-safe modal bottom sheet featuring circular national flags (`country_flags`) and multi-field search (by currency code, full currency name, or country name).
-- **💾 Offline-First Architecture**: Transparent fallback to cached rates via `SharedPreferences` when offline, with cache freshness indicators.
-- **⭐ Saved Pairs Watchlist**: Instant bookmarking of frequently converted currency pairs with live unit conversion rates and relative update timestamps.
+- **📱 Interactive Android Home Screen Widget**:
+  - Live currency pair rates and calculation engine directly on the home screen.
+  - Interactive stepper buttons (`+10`, `+50`, `+100`, and Reset `C`) without launching the app.
+  - Dynamic currency swapping (`⇄`) with real-time reciprocal rates.
+- **🗂️ 2-Column Currency Picker Sheet**: Keyboard-safe modal bottom sheet featuring circular national flags (`country_flags`) and multi-field search (by currency code, currency name, or country name).
+- **💾 Offline-First Architecture**: Transparent fallback to cached rates via `SharedPreferences` when offline, with sync freshness indicators.
+- **⭐ Saved Pairs Watchlist**: Instant bookmarking of frequently converted currency pairs with live unit conversion rates.
 - **📈 7-Day Trend Analytics**: Visual rate trend analytics with interactive sparkline charts powered by `fl_chart`.
-- **⚙️ Apple HIG Grouped Settings**: Grouped inset cards for managing default base/target currencies, theme appearance, and one-tap offline cache clearing.
-- **🎯 100% Google Stitch Design System**: Custom palette tokens (`#163300` Forest Green, `#9FE870` Lime, `#FFFFFF` Surface, `#E5E7EB` Card Border) with 44×44pt touch targets and 16pt border radii.
+- **🎯 Obsidian Dark Design System**: High-contrast dark tokens (`#0B0C1E` Scaffold, `#14152D` Surface, `#1B1C38` Input, `#6C5CE7` Accent Glow) with tabular numeric typography alignment.
 
 ---
 
 ## 🏗️ Architecture
 
-CurrencySnap adheres strictly to **Clean Architecture** principles and the **BLoC (Business Logic Component)** pattern for deterministic state management:
+CurrencySnap adheres strictly to **Clean Architecture** principles and the **BLoC (Business Logic Component)** pattern:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     Presentation Layer                      │
-│   Screens (Home, Favorites, Settings, Splash, Chart)       │
+│   Screens (Home, Favorites, Settings, Splash, Chart)        │
 │   Widgets (CurrencyInputCard, SwapButton, FavoritePairTile) │
 │   Bottom Sheets (CurrencyPickerSheet)                       │
 └──────────────────────────────┬──────────────────────────────┘
@@ -46,21 +49,22 @@ CurrencySnap adheres strictly to **Clean Architecture** principles and the **BLo
 │                    Business Logic (BLoC)                    │
 │   ConvertCubit    ───► ConvertState (Initial, Loaded, Error)│
 │   FavoritesCubit  ───► FavoritesState (Status, Pair List)   │
+│   SettingsCubit   ───► SettingsState (Theme, Defaults)      │
 └──────────────────────────────┬──────────────────────────────┘
                                │ Injects Repository Contract
 ┌──────────────────────────────▼──────────────────────────────┐
 │                     Repository Layer                        │
-│                  CurrencyRepository                         │
+│                   CurrencyRepository                        │
 │   (Rate retrieval, cross-currency math, favorites CRUD)     │
 └──────────────────────────────┬──────────────────────────────┘
                                │
-               ┌───────────────┴───────────────┐
-               │                               │
-┌──────────────▼──────────────┐ ┌──────────────▼──────────────┐
+                ┌──────────────┴──────────────┐
+                │                             │
+┌───────────────▼─────────────┐ ┌─────────────▼───────────────┐
 │     Remote Data Source      │ │      Local Data Source      │
-│  CurrencyRemoteDataSource   │ │  CurrencyCacheDataSource    │
-│  (Dio HTTP client / API)    │ │  FavoritesLocalDataSource   │
-│                             │ │  (SharedPreferences cache)  │
+│   CurrencyRemoteDataSource  │ │   CurrencyCacheDataSource   │
+│   (Dio HTTP client / API)   │ │   FavoritesLocalDataSource  │
+│                             │ │   (SharedPreferences cache) │
 └─────────────────────────────┘ └─────────────────────────────┘
 ```
 
@@ -70,40 +74,29 @@ CurrencySnap adheres strictly to **Clean Architecture** principles and the **BLo
 
 | Technology | Purpose |
 |---|---|
-| **Flutter & Dart** | Cross-platform UI toolkit and strongly-typed programming language |
-| **`flutter_bloc` & `equatable`** | Predictable, reactive state management using Cubits and value equality |
-| **`dio`** | Robust HTTP client with timeouts, headers, and interceptor logging |
+| **Flutter & Dart** | Cross-platform UI toolkit and strongly-typed language |
+| **`flutter_bloc` & `equatable`** | Predictable, reactive state management using Cubits |
+| **`dio`** | Robust HTTP client with timeouts, logging, and error handling |
 | **`shared_preferences`** | Key-value persistent storage for offline rate snapshots and saved pairs |
-| **`fl_chart`** | Smooth, customizable chart engine for 7-day rate trends |
+| **`home_widget`** | Native Android Kotlin RemoteViews bridge for Home Screen Widget |
+| **`fl_chart`** | Customizable chart engine for 7-day historical rate trends |
 | **`country_flags`** | Vector-sharp circular country and regional flag rendering |
 | **`intl`** | Number and currency formatting utilities |
-| **`home_widget`** | Native Android/iOS home screen widget capabilities |
-
----
-
-## 🚀 6-Day Agile Development Roadmap
-
-| Day | Milestone / Sprint Goal | Deliverables | Status |
-|:---:|---|---|:---:|
-| **Day 1** | **Core Architecture & Networking** | Directory structuring, `Dio` network configuration, `CurrencyRateModel`, Open Exchange Rates API integration. | ✅ Complete |
-| **Day 2** | **Offline Persistence & Repository** | `CurrencyCacheDataSource`, `FavoritesLocalDataSource` via `SharedPreferences`, `CurrencyRepository` implementation. | ✅ Complete |
-| **Day 3** | **BLoC State Management** | `ConvertCubit`, `ConvertState`, `FavoritesCubit`, `FavoritesState`, cross-rate math engine. | ✅ Complete |
-| **Day 4** | **Converter UI & Google Stitch Redesign** | Stitch design tokens, `HomeScreen` dashboard, `CurrencyInputCard`, `SwapButton`, `CurrencyPickerSheet`. | ✅ Complete |
-| **Day 5** | **Favorites, Flags & Analytics** | Dual overlapping flag avatars on `FavoritePairTile`, `FavoritesScreen`, `RateChartWidget`, `HistoricalRateChartScreen`. | ✅ Complete |
-| **Day 6** | **Settings, QA & Production Polish** | Grouped `SettingScreen`, `SplashScreen` brand animations, widget tests, 0 analyzer errors. | ✅ Complete |
 
 ---
 
 ## 📁 Directory Structure
 
-```
+```plaintext
 lib/
 ├── bloc/
 │   ├── convert/          # ConvertCubit & ConvertState
-│   └── favorites/        # FavoritesCubit & FavoritesState
+│   ├── favorites/        # FavoritesCubit & FavoritesState
+│   └── settings/         # SettingsCubit & SettingsState
 ├── core/
-│   ├── constants/        # AppConstants & Currency mappings
-│   └── theme/            # AppColors (Stitch palette) & AppTheme
+│   ├── constants/        # AppConstants & endpoints
+│   ├── services/         # WidgetService (HomeWidget sync)
+│   └── theme/            # AppColors (Obsidian palette) & AppTheme
 ├── data/
 │   ├── datasources/
 │   │   ├── local/        # CurrencyCacheDataSource & FavoritesLocalDataSource
@@ -129,9 +122,9 @@ lib/
 ## ⚙️ Getting Started
 
 ### Prerequisites
-- Flutter SDK `^3.12.0` or higher
-- Dart SDK `^3.12.0` or higher
-- Android Studio / VS Code with Flutter extension
+- Flutter SDK `^3.x`
+- Dart SDK `^3.x`
+- Android Studio / VS Code
 
 ### Installation & Run
 
@@ -154,7 +147,7 @@ lib/
 
 4. **Launch application:**
    ```bash
-   flutter run
+   flutter run --no-tree-shake-icons
    ```
 
 ---
