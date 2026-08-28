@@ -14,7 +14,12 @@ class SettingsCubit extends Cubit<SettingsState> {
 
   void _loadSettings() {
     final savedThemeKey = _prefs.getString(AppConstants.prefKeyThemeMode);
-    final themeMode = AppThemeMode.fromKey(savedThemeKey);
+    final AppThemeMode themeMode;
+    if (savedThemeKey == null || savedThemeKey.isEmpty) {
+      themeMode = AppThemeMode.dark;
+    } else {
+      themeMode = AppThemeMode.fromKey(savedThemeKey);
+    }
 
     final savedBase = _prefs.getString(AppConstants.prefKeyDefaultCurrency) ??
         AppConstants.defaultBaseCurrency;

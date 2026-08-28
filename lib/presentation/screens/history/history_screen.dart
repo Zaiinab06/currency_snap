@@ -115,13 +115,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final scaffoldBg = theme.scaffoldBackgroundColor;
-    final surfaceColor = isLight ? Colors.white : theme.cardColor;
-    final primaryColor = theme.colorScheme.primary;
-    final primaryLightColor = theme.colorScheme.secondary;
+    final scaffoldBg = isLight ? theme.scaffoldBackgroundColor : AppColors.scaffoldBackground;
+    final surfaceColor = isLight ? Colors.white : AppColors.surface;
+    final primaryColor = AppColors.primary;
+    final primaryLightColor = AppColors.primaryLight;
     final borderColor = isLight
         ? Colors.black.withValues(alpha: 0.06)
-        : theme.dividerColor;
+        : AppColors.border;
 
     final filtered = _filterQuery.isEmpty
         ? _history

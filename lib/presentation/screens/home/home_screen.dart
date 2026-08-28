@@ -133,9 +133,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final scaffoldBg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: scaffoldBg,
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusScope.of(context).unfocus(),
@@ -181,16 +183,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLoadedContent(BuildContext context, ConvertLoaded state) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
-    final primaryColor = theme.colorScheme.primary;
-    final primaryLightColor = theme.colorScheme.secondary;
-    final surfaceColor = isLight ? Colors.white : theme.cardColor;
-    final borderColor = isLight
-        ? Colors.black.withValues(alpha: 0.06)
-        : theme.dividerColor;
-    final labelMutedColor = isLight
-        ? const Color(0xFF64748B)
-        : theme.colorScheme.onSurfaceVariant;
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryColor = AppColors.primary;
+    final primaryLightColor = AppColors.primaryLight;
+    final cardSurface = isDark ? AppColors.darkCardSurface : AppColors.lightCardSurface;
+    final border = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final cubit = context.read<ConvertCubit>();
 
     final unitRate =
@@ -218,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.6,
-                  color: theme.colorScheme.onSurface,
+                  color: textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -252,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: labelMutedColor,
+                      color: textSecondary,
                     ),
                   ),
                 ],
@@ -270,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: labelMutedColor,
+                      color: textSecondary,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -311,25 +310,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: labelMutedColor,
+                  color: textSecondary,
                 ),
               ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: surfaceColor,
+                  color: cardSurface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor, width: 1.2),
-                  boxShadow: isLight
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : null,
+                  border: Border.all(
+                    color: border,
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: _presetAmounts.map((preset) {
@@ -358,8 +358,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? primaryColor
-                                : Colors.transparent,
+                                : cardSurface,
                             borderRadius: BorderRadius.circular(12),
+                            border: isSelected
+                                ? null
+                                : Border.all(
+                                    color: isDark
+                                        ? AppColors.darkBorder.withValues(alpha: 0.6)
+                                        : AppColors.lightBorder,
+                                    width: 1,
+                                  ),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
@@ -382,7 +390,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     : FontWeight.w600,
                                 color: isSelected
                                     ? Colors.white
-                                    : labelMutedColor,
+                                    : textSecondary,
                                 letterSpacing: -0.2,
                               ),
                             ),
@@ -397,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 3. Stacked Midnight Input Cards with Centered Animated Swap Button
+          // 3. Stacked Input Cards with Centered Animated Swap Button
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -457,27 +465,19 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: isLight
-                    ? Colors.white
-                    : theme.colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.7,
-                      ),
+                color: cardSurface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isLight
-                      ? Colors.black.withValues(alpha: 0.06)
-                      : primaryColor.withValues(alpha: 0.2),
+                  color: border,
                   width: 1.2,
                 ),
-                boxShadow: isLight
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -492,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     '1 ${state.fromCurrency} = ${unitRate > 100 ? unitRate.toStringAsFixed(2) : unitRate.toStringAsFixed(4)} ${state.toCurrency}',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+                      color: textPrimary,
                       fontSize: 13,
                       letterSpacing: -0.2,
                     ),
@@ -592,7 +592,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       size: 18,
                       color: _isSavedPairActive
                           ? primaryColor
-                          : primaryLightColor,
+                          : (isDark ? primaryLightColor : primaryColor),
                     ),
                   ),
                   label: AnimatedDefaultTextStyle(
@@ -602,7 +602,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: 14,
                       color: _isSavedPairActive
                           ? primaryColor
-                          : primaryLightColor,
+                          : (isDark ? primaryLightColor : primaryColor),
                     ),
                     child: Text(
                       _isSavedPairActive ? 'Saved Pair!' : 'Save Pair',
@@ -611,12 +611,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _isSavedPairActive
                         ? primaryColor
-                        : primaryLightColor,
+                        : (isDark ? primaryLightColor : primaryColor),
                     backgroundColor: _isSavedPairActive
                         ? primaryColor.withValues(alpha: 0.16)
-                        : surfaceColor,
+                        : cardSurface,
                     side: BorderSide(
-                      color: _isSavedPairActive ? primaryColor : borderColor,
+                      color: _isSavedPairActive
+                          ? primaryColor
+                          : (isDark ? primaryLightColor : primaryColor),
                       width: _isSavedPairActive ? 1.6 : 1.2,
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -648,7 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
-                      color: labelMutedColor,
+                      color: textSecondary,
                     ),
                   ),
                 ],
@@ -732,24 +734,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 168,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: surfaceColor,
+                        color: cardSurface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: borderColor, width: 1.2),
-                        boxShadow: isLight
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ]
-                            : [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.25),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
+                        border: Border.all(color: border, width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -769,7 +763,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: surfaceColor,
+                                            color: cardSurface,
                                             width: 1.5,
                                           ),
                                         ),
@@ -800,7 +794,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: surfaceColor,
+                                            color: cardSurface,
                                             width: 1.5,
                                           ),
                                         ),
@@ -865,7 +859,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: -0.2,
-                                  color: theme.colorScheme.onSurface,
+                                  color: textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -896,7 +890,7 @@ class _HomeScreenState extends State<HomeScreen> {
             'Mid-market exchange rates provided for informational purposes only. Actual transaction rates may vary by institution.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.textMuted,
+              color: textSecondary,
               fontSize: 11,
               height: 1.4,
             ),

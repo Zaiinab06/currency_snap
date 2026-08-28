@@ -211,6 +211,7 @@ class ConvertCubit extends Cubit<ConvertState> {
 
       WidgetService.syncHomeWidget(
         baseCurrency: loadedState.fromCurrency,
+
         targetCurrency: loadedState.toCurrency,
         rate: unitRate,
         updatedTime: timeStr,

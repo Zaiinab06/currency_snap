@@ -16,6 +16,7 @@ class AppConstants {
 
   static const String defaultBaseCurrency = 'USD';
   static const String defaultTargetCurrency = 'PKR';
+  static const String defaultThemeMode = 'dark';
 
   static const String appName = 'CurrencySnap';
   static const String appTagline = 'Convert smarter, wherever you are.';

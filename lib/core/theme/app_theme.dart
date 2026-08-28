@@ -8,20 +8,20 @@ class AppTheme {
   /// Clean, bright Material 3 fintech light theme.
   static final ThemeData lightTheme = _buildTheme(
     isDark: false,
-    background: const Color(0xFFF1F3F9), // #F1F3F9 slightly off-white cool grey
+    background: const Color(0xFFF4F5FA), // Light scaffold background #F4F5FA
     surface: const Color(0xFFFFFFFF),    // Solid white cards #FFFFFF
-    surfaceAlt: const Color(0xFFF8F9FE),
-    surfaceElevated: const Color(0xFFE9ECF5),
+    surfaceAlt: const Color(0xFFF8FAFC), // Input background #F8FAFC
+    surfaceElevated: const Color(0xFFF1F5F9),
     primary: const Color(0xFF6C5CE7),
     primaryLight: const Color(0xFF8C7CFF),
-    cardBorder: const Color(0x0F000000), // Colors.black.withOpacity(0.06)
-    borderHighlight: const Color(0x1A000000),
-    textPrimary: const Color(0xFF1E293B), // Dark charcoal/slate
-    textSecondary: const Color(0xFF64748B), // Legible muted grey #64748B
+    cardBorder: const Color(0xFFE2E8F0), // Subtle light border #E2E8F0
+    borderHighlight: const Color(0xFFCBD5E1),
+    textPrimary: const Color(0xFF0F172A), // Dark slate text #0F172A
+    textSecondary: const Color(0xFF64748B), // Legible muted slate #64748B
     textMuted: const Color(0xFF94A3B8),
   );
 
-  /// Deep Midnight Fintech dark theme (Selected by default).
+  /// Deep Midnight Obsidian Dark & Neon Purple fintech theme (Permanent default).
   static final ThemeData darkTheme = _buildTheme(
     isDark: true,
     background: const Color(0xFF0B0C1E),
@@ -30,11 +30,11 @@ class AppTheme {
     surfaceElevated: const Color(0xFF22244C),
     primary: const Color(0xFF6C5CE7),
     primaryLight: const Color(0xFF8C7CFF),
-    cardBorder: const Color(0xFF252648),
+    cardBorder: const Color(0xFF2E2F52),
     borderHighlight: const Color(0xFF383A6B),
     textPrimary: const Color(0xFFFFFFFF),
-    textSecondary: const Color(0xFF8E8EA8),
-    textMuted: const Color(0xFF5E5E7A),
+    textSecondary: const Color(0xFF8E8EA9),
+    textMuted: const Color(0xFF8E8EA9),
   );
 
   static ThemeData _buildTheme({

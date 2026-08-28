@@ -73,12 +73,13 @@ class _CurrencySnapAppState extends State<CurrencySnapApp> {
           buildWhen: (previous, current) =>
               previous.themeMode != current.themeMode,
           builder: (context, settingsState) {
+            final effectiveThemeMode = settingsState.flutterThemeMode;
             return MaterialApp(
               title: AppConstants.appName,
               debugShowCheckedModeBanner: false,
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
-              themeMode: settingsState.flutterThemeMode,
+              themeMode: effectiveThemeMode,
               home: const SplashScreen(),
             );
           },

@@ -42,6 +42,9 @@ class SettingsState extends Equatable {
   /// Returns the corresponding Flutter [ThemeMode] enum.
   ThemeMode get flutterThemeMode => themeMode.mode;
 
+  /// Whether Obsidian Dark mode is currently active.
+  bool get isDarkMode => themeMode == AppThemeMode.dark;
+
   factory SettingsState.initial() {
     return const SettingsState(
       themeMode: AppThemeMode.dark,

@@ -139,9 +139,10 @@ class FavoritePairTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final surfaceColor = theme.cardColor;
     final borderColor = theme.dividerColor;
-    final primaryLightColor = theme.colorScheme.secondary;
+    final primaryLightColor = AppColors.primaryLight;
 
     return Container(
       decoration: BoxDecoration(
@@ -150,7 +151,7 @@ class FavoritePairTile extends StatelessWidget {
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),

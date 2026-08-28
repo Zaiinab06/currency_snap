@@ -96,17 +96,17 @@ class _RatesScreenState extends State<RatesScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLight = theme.brightness == Brightness.light;
-    final scaffoldBg = theme.scaffoldBackgroundColor;
-    final surfaceColor = isLight ? Colors.white : theme.cardColor;
-    final surfaceAlt = theme.colorScheme.surfaceContainerHighest;
-    final primaryColor = theme.colorScheme.primary;
-    final primaryLightColor = theme.colorScheme.secondary;
+    final scaffoldBg = isLight ? theme.scaffoldBackgroundColor : AppColors.scaffoldBackground;
+    final surfaceColor = isLight ? Colors.white : AppColors.surface;
+    final surfaceAlt = isLight ? theme.colorScheme.surfaceContainerHighest : AppColors.surfaceAlt;
+    final primaryColor = AppColors.primary;
+    final primaryLightColor = AppColors.primaryLight;
     final borderColor = isLight
         ? Colors.black.withValues(alpha: 0.06)
-        : theme.dividerColor;
+        : AppColors.border;
     final labelMutedColor = isLight
         ? const Color(0xFF64748B)
-        : theme.colorScheme.onSurfaceVariant;
+        : AppColors.textSecondary;
 
     final canPop = Navigator.of(context).canPop();
 

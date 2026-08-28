@@ -70,37 +70,31 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLight = theme.brightness == Brightness.light;
-    final isDark = widget.isDark;
+    final isDark = theme.brightness == Brightness.dark;
     
-    // In Light Mode: Solid #FFFFFF card, in Dark Mode: midnight surfaces
-    final cardBg = isLight
-        ? Colors.white
-        : (isDark ? theme.colorScheme.surfaceContainerHighest : theme.cardColor);
-    final cardBorder = isLight
-        ? Colors.black.withValues(alpha: 0.06)
-        : (isDark ? theme.colorScheme.outlineVariant : theme.dividerColor);
-    final labelColor = isLight ? const Color(0xFF64748B) : theme.colorScheme.onSurfaceVariant;
-    final amountColor = theme.colorScheme.onSurface;
+    final cardBg = isDark ? AppColors.darkCardSurface : AppColors.lightCardSurface;
+    final cardBorder = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final labelColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final amountColor = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: cardBorder, width: 1.2),
-        boxShadow: isLight
+        boxShadow: isDark
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ]
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 12,
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -138,7 +132,7 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
                           ThousandsSeparatorInputFormatter(),
                         ],
                         cursorColor: theme.colorScheme.secondary,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -146,7 +140,7 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
                           contentPadding: EdgeInsets.zero,
                           isDense: true,
                           hintStyle: TextStyle(
-                            color: AppColors.textMuted,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                           ),
                         ),
                         onChanged: widget.onAmountChanged,
@@ -165,7 +159,7 @@ class _CurrencyInputCardState extends State<CurrencyInputCard> {
               _CurrencyPill(
                 code: widget.currencyCode,
                 onTap: widget.onCurrencyTap,
-                isDark: isDark,
+                isDark: widget.isDark,
               ),
             ],
           ),
@@ -189,36 +183,30 @@ class _CurrencyPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDarkTheme = theme.brightness == Brightness.dark;
     final flagCode = FlagCode.fromCurrencyCode(code);
     final countryCode = kCurrencyData[code]?.countryCode ??
         code.substring(0, code.length > 2 ? 2 : code.length);
 
-    final isLight = theme.brightness == Brightness.light;
-    final pillBg = isLight
-        ? const Color(0xFFF1F3F9)
-        : (isDark ? theme.colorScheme.surfaceContainerHighest : theme.cardColor);
-    final pillBorder = isLight
-        ? Colors.black.withValues(alpha: 0.06)
-        : (isDark
-            ? theme.colorScheme.primary.withValues(alpha: 0.3)
-            : theme.dividerColor);
-    final textColor = theme.colorScheme.onSurface;
-    final arrowColor = isLight ? const Color(0xFF64748B) : theme.colorScheme.onSurfaceVariant;
+    final pillBg = isDarkTheme ? AppColors.darkInputBox : AppColors.lightInputBox;
+    final pillBorder = isDarkTheme ? AppColors.darkBorder : AppColors.lightBorder;
+    final textColor = isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+    final arrowColor = isDarkTheme ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: pillBg,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: pillBorder, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isLight ? 0.03 : (isDark ? 0.15 : 0.05)),
+                color: Colors.black.withValues(alpha: isDarkTheme ? 0.15 : 0.03),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),

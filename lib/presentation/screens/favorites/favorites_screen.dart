@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../bloc/convert/convert_cubit.dart';
 import '../../../bloc/favorites/favorites_cubit.dart';
 import '../../../bloc/favorites/favorites_state.dart';
@@ -28,9 +29,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scaffoldBg = theme.scaffoldBackgroundColor;
-    final primaryLight = theme.colorScheme.secondary;
-    final surfaceColor = theme.cardColor;
+    final isLight = theme.brightness == Brightness.light;
+    final scaffoldBg = isLight ? theme.scaffoldBackgroundColor : AppColors.scaffoldBackground;
+    final primaryLight = AppColors.primaryLight;
+    final surfaceColor = isLight ? Colors.white : AppColors.surface;
 
     return Scaffold(
       backgroundColor: scaffoldBg,

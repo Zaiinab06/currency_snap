@@ -30,9 +30,12 @@ class _AppBottomNavState extends State<AppBottomNav> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scaffoldBg = theme.scaffoldBackgroundColor;
-    final primaryLight = theme.colorScheme.secondary;
-    final borderColor = theme.dividerColor;
+    final isDark = theme.brightness == Brightness.dark;
+    final scaffoldBg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
+    final navBg = isDark ? AppColors.darkNavBackground : AppColors.lightNavBackground;
+    const primaryAccent = AppColors.primary;
+    final unselectedColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     return Scaffold(
       backgroundColor: scaffoldBg,
@@ -42,13 +45,13 @@ class _AppBottomNavState extends State<AppBottomNav> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: scaffoldBg,
+          color: navBg,
           border: Border(
             top: BorderSide(color: borderColor, width: 1),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
+              color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
               blurRadius: 16,
               offset: const Offset(0, -4),
             ),
@@ -65,52 +68,52 @@ class _AppBottomNavState extends State<AppBottomNav> {
               });
             }
           },
-          backgroundColor: scaffoldBg,
-          indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.25),
+          backgroundColor: navBg,
+          indicatorColor: primaryAccent.withValues(alpha: isDark ? 0.25 : 0.15),
           height: 68,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           destinations: [
             NavigationDestination(
-              icon: const Icon(CupertinoIcons.arrow_right_arrow_left, color: AppColors.textSecondary, size: 21),
-              selectedIcon: Icon(
+              icon: Icon(CupertinoIcons.arrow_right_arrow_left, color: unselectedColor, size: 21),
+              selectedIcon: const Icon(
                 CupertinoIcons.arrow_right_arrow_left,
-                color: primaryLight,
+                color: primaryAccent,
                 size: 22,
               ),
               label: 'Home',
             ),
             NavigationDestination(
-              icon: const Icon(CupertinoIcons.chart_bar_square, color: AppColors.textSecondary, size: 22),
-              selectedIcon: Icon(
+              icon: Icon(CupertinoIcons.chart_bar_square, color: unselectedColor, size: 22),
+              selectedIcon: const Icon(
                 CupertinoIcons.chart_bar_square_fill,
-                color: primaryLight,
+                color: primaryAccent,
                 size: 23,
               ),
               label: 'Rates',
             ),
             NavigationDestination(
-              icon: const Icon(CupertinoIcons.star, color: AppColors.textSecondary, size: 22),
-              selectedIcon: Icon(
+              icon: Icon(CupertinoIcons.star, color: unselectedColor, size: 22),
+              selectedIcon: const Icon(
                 CupertinoIcons.star_fill,
-                color: primaryLight,
+                color: primaryAccent,
                 size: 23,
               ),
               label: 'Favorites',
             ),
             NavigationDestination(
-              icon: const Icon(CupertinoIcons.clock, color: AppColors.textSecondary, size: 22),
-              selectedIcon: Icon(
+              icon: Icon(CupertinoIcons.clock, color: unselectedColor, size: 22),
+              selectedIcon: const Icon(
                 CupertinoIcons.clock_fill,
-                color: primaryLight,
+                color: primaryAccent,
                 size: 23,
               ),
               label: 'History',
             ),
             NavigationDestination(
-              icon: const Icon(CupertinoIcons.gear, color: AppColors.textSecondary, size: 22),
-              selectedIcon: Icon(
+              icon: Icon(CupertinoIcons.gear, color: unselectedColor, size: 22),
+              selectedIcon: const Icon(
                 CupertinoIcons.gear_alt_fill,
-                color: primaryLight,
+                color: primaryAccent,
                 size: 23,
               ),
               label: 'Settings',

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../navigation/app_bottom_nav.dart';
 
 /// Splash screen displaying brand styling and navigating to main after 1.6s.
@@ -37,15 +38,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Background: Deep Midnight color #0B0C1E
-    const backgroundColor = Color(0xFF0B0C1E);
-    // Primary accent purple
-    const primaryColor = Color(0xFF6C5CE7);
-    // Soft muted indigo for tagline
-    const taglineColor = Color(0xFF8E8EA9);
+    const primaryColor = AppColors.primary;
+    const taglineColor = AppColors.textSecondary;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.scaffoldBackground,
       body: SafeArea(
         child: Center(
           child: Column(
