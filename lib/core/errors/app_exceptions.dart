@@ -1,10 +1,19 @@
-/// Thrown when a remote API call fails due to network, timeout, or server errors.
+/// Thrown when a remote API call fails due to network, timeout, or client connectivity errors.
 class NetworkException implements Exception {
   final String message;
   const NetworkException(this.message);
 
   @override
   String toString() => 'NetworkException: $message';
+}
+
+/// Thrown when the remote server returns an error response (e.g. 403 Forbidden, 500, etc.).
+class ServerException implements Exception {
+  final String message;
+  const ServerException([this.message = 'Server error occurred.']);
+
+  @override
+  String toString() => 'ServerException: $message';
 }
 
 /// Thrown when the API response payload is invalid or cannot be parsed.

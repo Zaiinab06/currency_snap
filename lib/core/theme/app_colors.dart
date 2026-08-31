@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Application color palette defining Obsidian Dark & Fintech Clean Light theme tokens.
+/// Application color palette defining WCAG AA accessible tokens, Deep Plum & Neon Glow Dark theme, and Clean Light theme.
 class AppColors {
   AppColors._();
 
-  // Dark Theme Tokens (Obsidian Dark)
-  static const Color darkBackground = Color(0xFF0B0C1E);
-  static const Color darkCardSurface = Color(0xFF14152D);
-  static const Color darkInputBox = Color(0xFF1B1C38);
-  static const Color darkBorder = Color(0xFF2E2F52);
+  // Dark Theme Tokens (Deep Plum & Neon Glow Canvas)
+  static const Color darkBackground = Color(0xFF07060A); // Deep canvas
+  static const Color darkCardSurface = Color(0xFF160F23); // Deep plum
+  static const Color darkInputBox = Color(0xFF231738); // Inner input surface / chips
+  static const Color darkBorder = Color(0xFF382352); // Card hairline borders
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
-  static const Color darkTextSecondary = Color(0xFF8E8EA9);
-  static const Color darkNavBackground = Color(0xFF0E0F24);
+  static const Color darkTextSecondary = Color(0xFF94A3B8); // High contrast text on dark
+  static const Color darkNavBackground = Color(0xFF0D0914);
 
   // Light Theme Tokens (Fintech Clean Light)
   static const Color lightBackground = Color(0xFFF4F5FA);
@@ -19,7 +19,7 @@ class AppColors {
   static const Color lightInputBox = Color(0xFFF8FAFC);
   static const Color lightBorder = Color(0xFFE2E8F0);
   static const Color lightTextPrimary = Color(0xFF0F172A);
-  static const Color lightTextSecondary = Color(0xFF64748B);
+  static const Color lightTextSecondary = Color(0xFF475569); // High contrast text on light
   static const Color lightNavBackground = Color(0xFFFFFFFF);
 
   // Default Dark Tokens
@@ -29,37 +29,82 @@ class AppColors {
   static const Color cardSurface = darkCardSurface;
   static const Color surfaceAlt = darkInputBox;
   static const Color inputBox = darkInputBox;
-  static const Color surfaceElevated = Color(0xFF22244C);
+  static const Color surfaceElevated = Color(0xFF231738);
   static const Color navBackground = darkNavBackground;
 
-  // Primary & Accents (Neon Purple)
-  static const Color primary = Color(0xFF6C5CE7);
-  static const Color primaryLight = Color(0xFF8C7CFF);
-  static const Color primaryDark = Color(0xFF5142CA);
-  static const Color accent = Color(0xFF8C7CFF);
-  static const Color neonPurple = Color(0xFF6C5CE7);
-  static const Color neonPurpleLight = Color(0xFF8C7CFF);
-  static const Color neonGlow = Color(0x666C5CE7);
+  // WCAG AA Accessible Neon & Accent Colors
+  static const Color neonPink = Color(0xFFF43F5E); // Accessible on #07060A (>4.5:1)
+  static const Color neonPurple = Color(0xFF8B5CF6);
+  static const Color primary = neonPurple;
+  static const Color primaryLight = neonPink;
+  static const Color primaryDark = Color(0xFF6D28D9);
+  static const Color accent = neonPink;
+  static const Color neonGlow = Color(0x668B5CF6);
+  static const Color neonPinkGlow = Color(0x66F43F5E);
 
   // Borders & Dividers
   static const Color cardBorder = darkBorder;
   static const Color border = darkBorder;
-  static const Color borderHighlight = Color(0xFF383A6B);
+  static const Color borderHighlight = Color(0xFF4A306D);
 
   // Typography
   static const Color textPrimary = darkTextPrimary;
   static const Color textSecondary = darkTextSecondary;
   static const Color textMuted = darkTextSecondary;
 
-  // Financial Deltas & Status
-  static const Color success = Color(0xFF00E676); // Mint Green
-  static const Color deltaPositive = Color(0xFF00E676);
-  static const Color error = Color(0xFFFF5252); // Coral Red
-  static const Color deltaNegative = Color(0xFFFF5252);
-  static const Color warning = Color(0xFFFFB300);
+  // Status & Financial Deltas
+  static const Color liveGreen = Color(0xFF10B981);
+  static const Color success = liveGreen;
+  static const Color deltaPositive = liveGreen;
+  static const Color alertRed = Color(0xFFF43F5E);
+  static const Color error = alertRed;
+  static const Color deltaNegative = alertRed;
+  static const Color warning = Color(0xFFF59E0B);
 
   // On-tokens
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color onAccent = Color(0xFFFFFFFF);
   static const Color onSurface = Color(0xFFFFFFFF);
+
+  /// Neon card decoration utility.
+  static BoxDecoration neonCardDecoration({
+    Color? color,
+    Color? borderColor,
+    double borderRadius = 18.0,
+    bool glow = true,
+    BorderSide? borderSide,
+  }) {
+    return BoxDecoration(
+      color: color ?? cardSurface,
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: borderSide != null
+          ? Border.fromBorderSide(borderSide)
+          : Border.all(
+              color: borderColor ?? cardBorder,
+              width: 1.2,
+            ),
+      boxShadow: glow
+          ? [
+              BoxShadow(
+                color: neonPurple.withValues(alpha: 0.18),
+                blurRadius: 16,
+                spreadRadius: -2,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: neonPink.withValues(alpha: 0.10),
+                blurRadius: 24,
+                spreadRadius: -4,
+                offset: const Offset(0, 8),
+              ),
+            ]
+          : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+    );
+  }
 }

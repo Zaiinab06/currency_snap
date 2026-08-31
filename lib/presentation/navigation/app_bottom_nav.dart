@@ -1,12 +1,12 @@
+import 'package:currency_snap/features/converter/presentation/screens/home_screen.dart';
+import 'package:currency_snap/features/favorites/presentation/screens/favorites_screen.dart';
+import 'package:currency_snap/features/historical_rates/presentation/screens/rates_screen.dart';
+import 'package:currency_snap/features/history/presentation/screens/history_screen.dart';
+import 'package:currency_snap/features/settings/presentation/screens/setting_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
-import '../screens/home/home_screen.dart';
-import '../screens/rates/rates_screen.dart';
-import '../screens/favorites/favorites_screen.dart';
-import '../screens/history/history_screen.dart';
-import '../screens/settings/setting_screen.dart';
 
 /// Main navigation container preserving tab states across 5 primary fintech modules via an IndexedStack.
 class AppBottomNav extends StatefulWidget {
@@ -31,24 +31,25 @@ class _AppBottomNavState extends State<AppBottomNav> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final scaffoldBg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final navBg = isDark ? AppColors.darkNavBackground : AppColors.lightNavBackground;
+    final scaffoldBg = isDark
+        ? AppColors.darkBackground
+        : AppColors.lightBackground;
+    final navBg = isDark
+        ? AppColors.darkNavBackground
+        : AppColors.lightNavBackground;
     const primaryAccent = AppColors.primary;
-    final unselectedColor = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+    final unselectedColor = isDark
+        ? AppColors.darkTextSecondary
+        : AppColors.lightTextSecondary;
     final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
 
     return Scaffold(
       backgroundColor: scaffoldBg,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: navBg,
-          border: Border(
-            top: BorderSide(color: borderColor, width: 1),
-          ),
+          border: Border(top: BorderSide(color: borderColor, width: 1)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
@@ -74,7 +75,11 @@ class _AppBottomNavState extends State<AppBottomNav> {
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           destinations: [
             NavigationDestination(
-              icon: Icon(CupertinoIcons.arrow_right_arrow_left, color: unselectedColor, size: 21),
+              icon: Icon(
+                CupertinoIcons.arrow_right_arrow_left,
+                color: unselectedColor,
+                size: 21,
+              ),
               selectedIcon: const Icon(
                 CupertinoIcons.arrow_right_arrow_left,
                 color: primaryAccent,
@@ -83,7 +88,11 @@ class _AppBottomNavState extends State<AppBottomNav> {
               label: 'Home',
             ),
             NavigationDestination(
-              icon: Icon(CupertinoIcons.chart_bar_square, color: unselectedColor, size: 22),
+              icon: Icon(
+                CupertinoIcons.chart_bar_square,
+                color: unselectedColor,
+                size: 22,
+              ),
               selectedIcon: const Icon(
                 CupertinoIcons.chart_bar_square_fill,
                 color: primaryAccent,
@@ -101,7 +110,11 @@ class _AppBottomNavState extends State<AppBottomNav> {
               label: 'Favorites',
             ),
             NavigationDestination(
-              icon: Icon(CupertinoIcons.clock, color: unselectedColor, size: 22),
+              icon: Icon(
+                CupertinoIcons.clock,
+                color: unselectedColor,
+                size: 22,
+              ),
               selectedIcon: const Icon(
                 CupertinoIcons.clock_fill,
                 color: primaryAccent,

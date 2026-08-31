@@ -1,85 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
-import 'data/datasources/remote/currency_remote_datasource.dart';
-import 'data/datasources/local/currency_cache_datasource.dart';
-import 'data/datasources/local/favorites_local_datasource.dart';
-import 'data/datasources/local/history_local_datasource.dart';
-import 'data/repositories/currency_repository.dart';
-import 'bloc/convert/convert_cubit.dart';
-import 'bloc/favorites/favorites_cubit.dart';
-import 'bloc/settings/settings_cubit.dart';
-import 'bloc/settings/settings_state.dart';
 import 'core/services/widget_service.dart';
-import 'presentation/screens/splash/splash_screen.dart';
+import 'core/theme/app_theme.dart';
+import 'features/converter/domain/repositories/converter_repository.dart';
+import 'features/converter/presentation/cubit/convert_cubit.dart';
+import 'features/converter/presentation/screens/splash_screen.dart';
+import 'features/favorites/domain/repositories/favorites_repository.dart';
+import 'features/favorites/presentation/cubit/favorites_cubit.dart';
+import 'features/history/domain/repositories/history_repository.dart';
+import 'features/settings/domain/repositories/settings_repository.dart';
+import 'features/settings/presentation/cubit/settings_cubit.dart';
+import 'features/settings/presentation/cubit/settings_state.dart';
+import 'injection_container.dart' as di;
+import 'routes/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   WidgetService.initialize();
-  final prefs = await SharedPreferences.getInstance();
-  runApp(CurrencySnapApp(prefs: prefs));
+  await di.initServiceLocator();
+  runApp(const CurrencySnapApp());
 }
 
-class CurrencySnapApp extends StatefulWidget {
-  final SharedPreferences prefs;
-
-  const CurrencySnapApp({super.key, required this.prefs});
-
-  @override
-  State<CurrencySnapApp> createState() => _CurrencySnapAppState();
-}
-
-class _CurrencySnapAppState extends State<CurrencySnapApp> {
-  late final CurrencyRepository _repository;
-  late final SettingsCubit _settingsCubit;
-  late final ConvertCubit _convertCubit;
-  late final FavoritesCubit _favoritesCubit;
-
-  @override
-  void initState() {
-    super.initState();
-    _repository = CurrencyRepository(
-      CurrencyRemoteDataSource(),
-      CurrencyCacheDataSource(widget.prefs),
-      FavoritesLocalDataSource(widget.prefs),
-      HistoryLocalDataSource(widget.prefs),
-    );
-    _settingsCubit = SettingsCubit(widget.prefs);
-    _convertCubit = ConvertCubit(_repository);
-    _favoritesCubit = FavoritesCubit(_repository);
-  }
-
-  @override
-  void dispose() {
-    _settingsCubit.close();
-    _convertCubit.close();
-    _favoritesCubit.close();
-    super.dispose();
-  }
+class CurrencySnapApp extends StatelessWidget {
+  const CurrencySnapApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider.value(
-      value: _repository,
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<ConverterRepository>.value(
+          value: di.sl<ConverterRepository>(),
+        ),
+        RepositoryProvider<FavoritesRepository>.value(
+          value: di.sl<FavoritesRepository>(),
+        ),
+        RepositoryProvider<HistoryRepository>.value(
+          value: di.sl<HistoryRepository>(),
+        ),
+        RepositoryProvider<SettingsRepository>.value(
+          value: di.sl<SettingsRepository>(),
+        ),
+      ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider.value(value: _settingsCubit),
-          BlocProvider.value(value: _convertCubit),
-          BlocProvider.value(value: _favoritesCubit),
+          BlocProvider<SettingsCubit>(
+            create: (_) => di.sl<SettingsCubit>(),
+          ),
+          BlocProvider<ConvertCubit>(
+            create: (_) => di.sl<ConvertCubit>(),
+          ),
+          BlocProvider<FavoritesCubit>(
+            create: (_) => di.sl<FavoritesCubit>(),
+          ),
         ],
         child: BlocBuilder<SettingsCubit, SettingsState>(
           buildWhen: (previous, current) =>
               previous.themeMode != current.themeMode,
           builder: (context, settingsState) {
-            final effectiveThemeMode = settingsState.flutterThemeMode;
             return MaterialApp(
               title: AppConstants.appName,
               debugShowCheckedModeBanner: false,
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
-              themeMode: effectiveThemeMode,
+              themeMode: settingsState.flutterThemeMode,
+              onGenerateRoute: AppRouter.onGenerateRoute,
               home: const SplashScreen(),
             );
           },

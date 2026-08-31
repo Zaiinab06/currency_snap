@@ -1,40 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_colors.dart';
 
-/// Central theme configuration for CurrencySnap providing Material 3 Light & Midnight Dark themes adhering to Apple iOS Human Interface Guidelines (HIG).
+/// Central theme configuration for CurrencySnap providing Deep Plum & Neon Glow Dark theme and Clean Light theme.
 class AppTheme {
   AppTheme._();
 
   /// Clean, bright Material 3 fintech light theme.
   static final ThemeData lightTheme = _buildTheme(
     isDark: false,
-    background: const Color(0xFFF4F5FA), // Light scaffold background #F4F5FA
-    surface: const Color(0xFFFFFFFF),    // Solid white cards #FFFFFF
-    surfaceAlt: const Color(0xFFF8FAFC), // Input background #F8FAFC
+    background: AppColors.lightBackground,
+    surface: AppColors.lightCardSurface,
+    surfaceAlt: AppColors.lightInputBox,
     surfaceElevated: const Color(0xFFF1F5F9),
-    primary: const Color(0xFF6C5CE7),
-    primaryLight: const Color(0xFF8C7CFF),
-    cardBorder: const Color(0xFFE2E8F0), // Subtle light border #E2E8F0
+    primary: AppColors.neonPurple,
+    primaryLight: AppColors.neonPink,
+    cardBorder: AppColors.lightBorder,
     borderHighlight: const Color(0xFFCBD5E1),
-    textPrimary: const Color(0xFF0F172A), // Dark slate text #0F172A
-    textSecondary: const Color(0xFF64748B), // Legible muted slate #64748B
+    textPrimary: AppColors.lightTextPrimary,
+    textSecondary: AppColors.lightTextSecondary,
     textMuted: const Color(0xFF94A3B8),
   );
 
-  /// Deep Midnight Obsidian Dark & Neon Purple fintech theme (Permanent default).
+  /// Deep Plum Canvas & Neon Glow Dark theme (Default).
   static final ThemeData darkTheme = _buildTheme(
     isDark: true,
-    background: const Color(0xFF0B0C1E),
-    surface: const Color(0xFF14152D),
-    surfaceAlt: const Color(0xFF1B1C38),
-    surfaceElevated: const Color(0xFF22244C),
-    primary: const Color(0xFF6C5CE7),
-    primaryLight: const Color(0xFF8C7CFF),
-    cardBorder: const Color(0xFF2E2F52),
-    borderHighlight: const Color(0xFF383A6B),
-    textPrimary: const Color(0xFFFFFFFF),
-    textSecondary: const Color(0xFF8E8EA9),
-    textMuted: const Color(0xFF8E8EA9),
+    background: AppColors.darkBackground,
+    surface: AppColors.darkCardSurface,
+    surfaceAlt: AppColors.darkInputBox,
+    surfaceElevated: AppColors.surfaceElevated,
+    primary: AppColors.neonPurple,
+    primaryLight: AppColors.neonPink,
+    cardBorder: AppColors.darkBorder,
+    borderHighlight: AppColors.borderHighlight,
+    textPrimary: AppColors.darkTextPrimary,
+    textSecondary: AppColors.darkTextSecondary,
+    textMuted: AppColors.darkTextSecondary,
   );
 
   static ThemeData _buildTheme({
@@ -51,7 +52,8 @@ class AppTheme {
     required Color textSecondary,
     required Color textMuted,
   }) {
-    final baseTextTheme = (isDark ? ThemeData.dark() : ThemeData.light()).textTheme;
+    final baseTextTheme =
+        (isDark ? ThemeData.dark() : ThemeData.light()).textTheme;
     final interTheme = GoogleFonts.interTextTheme(baseTextTheme);
 
     return ThemeData(
@@ -65,7 +67,7 @@ class AppTheme {
               primary: primary,
               secondary: primaryLight,
               surface: surface,
-              error: const Color(0xFFFF5252),
+              error: AppColors.alertRed,
               onPrimary: Colors.white,
               onSurface: textPrimary,
               onSurfaceVariant: textSecondary,
@@ -77,7 +79,7 @@ class AppTheme {
               primary: primary,
               secondary: primaryLight,
               surface: surface,
-              error: const Color(0xFFFF5252),
+              error: AppColors.alertRed,
               onPrimary: Colors.white,
               onSurface: textPrimary,
               onSurfaceVariant: textSecondary,
@@ -157,7 +159,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: cardBorder, width: 1),
+          side: BorderSide(color: cardBorder, width: 1.2),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -203,29 +205,34 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surface,
-        indicatorColor: primary.withValues(alpha: isDark ? 0.22 : 0.15),
+        indicatorColor:
+            isDark ? const Color(0xFF4B1528) : const Color(0xFFFCE7F3),
+        indicatorShape: const StadiumBorder(),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: isDark ? primaryLight : primary,
+              color: const Color(0xFFFF6B8A),
             );
           }
           return GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: textSecondary,
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(
-              color: isDark ? primaryLight : primary,
+            return const IconThemeData(
+              color: Color(0xFFFF6B8A),
               size: 23,
             );
           }
-          return IconThemeData(color: textSecondary, size: 22);
+          return IconThemeData(
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            size: 22,
+          );
         }),
       ),
       inputDecorationTheme: InputDecorationTheme(
