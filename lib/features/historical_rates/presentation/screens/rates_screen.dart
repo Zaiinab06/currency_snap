@@ -14,6 +14,7 @@ import '../cubit/rates_cubit.dart';
 import '../cubit/rates_state.dart';
 import '../widgets/market_metrics_card.dart';
 import '../widgets/rate_chart_widget.dart';
+import '../widgets/rates_error_widget.dart';
 
 /// Screen displaying comprehensive exchange rates, interactive charts, and polished analytics.
 class RatesScreen extends StatefulWidget {
@@ -261,7 +262,49 @@ class _RatesScreenState extends State<RatesScreen> {
                   dynamicQuickPairs.insert(0, activeTuple);
                 }
 
-                return BlocBuilder<RatesCubit, RatesState>(
+                return BlocConsumer<RatesCubit, RatesState>(
+                  listener: (context, ratesState) {
+                    if (ratesState is RatesError) {
+                      final from = _selectedFrom ?? convertState.fromCurrency;
+                      final to = _selectedTo ?? convertState.toCurrency;
+                      // Gracefully fallback if non-default currency pair fails
+                      if (from != 'USD' || to != 'PKR') {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'Historical data not available for this currency pair. Defaulting to USD/PKR.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            duration: const Duration(seconds: 3),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                        setState(() {
+                          _selectedFrom = 'USD';
+                          _selectedTo = 'PKR';
+                        });
+                        final fallbackRate = convertState.rates.convertBetween(
+                              fromCurrency: 'USD',
+                              toCurrency: 'PKR',
+                              amount: 1.0,
+                            ) ??
+                            278.0;
+                        context.read<RatesCubit>().loadHistoricalRates(
+                              fromCurrency: 'USD',
+                              toCurrency: 'PKR',
+                              timeframe: _timeframes[_selectedTimeframeIndex],
+                              currentRate: fallbackRate,
+                            );
+                      }
+                    }
+                  },
                   builder: (context, ratesState) {
                     if (ratesState is RatesLoading) {
                       return Center(
@@ -271,10 +314,148 @@ class _RatesScreenState extends State<RatesScreen> {
                     }
 
                     if (ratesState is RatesError) {
-                      return Center(
-                        child: Text(
-                          ratesState.message,
-                          style: TextStyle(color: labelMutedColor),
+                      return RefreshIndicator(
+                        color: primaryLightColor,
+                        onRefresh: () async {
+                          await context.read<RatesCubit>().retry();
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // 1. Dynamic Quick Access Pair Selector Pills
+                              SizedBox(
+                                height: 34.0,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  itemCount: dynamicQuickPairs.length,
+                                  separatorBuilder: (context, index) =>
+                                      const SizedBox(width: 8),
+                                  itemBuilder: (context, index) {
+                                    final pair = dynamicQuickPairs[index];
+                                    final isSelected = pair.$1 == activeFrom &&
+                                        pair.$2 == activeTo;
+                                    return InkWell(
+                                      onTap: () {
+                                        HapticFeedback.selectionClick();
+                                        setState(() {
+                                          _selectedFrom = pair.$1;
+                                          _selectedTo = pair.$2;
+                                        });
+                                        final pairRate = convertState.rates
+                                                .convertBetween(
+                                              fromCurrency: pair.$1,
+                                              toCurrency: pair.$2,
+                                              amount: 1.0,
+                                            ) ??
+                                            unitRate;
+                                        context
+                                            .read<RatesCubit>()
+                                            .loadHistoricalRates(
+                                              fromCurrency: pair.$1,
+                                              toCurrency: pair.$2,
+                                              timeframe: _timeframes[
+                                                  _selectedTimeframeIndex],
+                                              currentRate: pairRate,
+                                            );
+                                      },
+                                      borderRadius: BorderRadius.circular(20.0),
+                                      child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 150),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14.0,
+                                          vertical: 7.0,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          gradient: isSelected
+                                              ? _pillSelectedGradient
+                                              : null,
+                                          color: isSelected
+                                              ? null
+                                              : (isLight
+                                                  ? const Color(0xFFF9FAFB)
+                                                  : surfaceColor),
+                                          borderRadius:
+                                              BorderRadius.circular(20.0),
+                                          border: isSelected
+                                              ? null
+                                              : Border.all(
+                                                  color: pillUnselectedBorder,
+                                                  width: 1.0,
+                                                ),
+                                          boxShadow: isSelected
+                                              ? [
+                                                  BoxShadow(
+                                                    color: const Color(0xFFFF3366)
+                                                        .withValues(alpha: 0.3),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                        child: Text(
+                                          '${pair.$1} / ${pair.$2}',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : (isLight
+                                                    ? const Color(0xFF4B5563)
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface),
+                                            fontWeight: isSelected
+                                                ? FontWeight.w700
+                                                : FontWeight.w600,
+                                            fontSize: 12.5,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Error View with Gradient Retry Button
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: !isLight
+                                    ? AppColors.neonCardDecoration(
+                                        color: surfaceColor,
+                                        borderColor: cardBorderColor,
+                                        glow: false,
+                                        borderRadius: 20,
+                                      )
+                                    : BoxDecoration(
+                                        color: surfaceColor,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                            color: cardBorderColor, width: 1.2),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.03),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                child: RatesErrorWidget(
+                                  message: ratesState.message,
+                                  onRetry: () {
+                                    context.read<RatesCubit>().retry();
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }
@@ -305,214 +486,202 @@ class _RatesScreenState extends State<RatesScreen> {
                       _ => 'Low',
                     };
 
-                    return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // 1. Dynamic Quick Access Pair Selector Pills (Height 34.0)
-                          SizedBox(
-                            height: 34.0,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: dynamicQuickPairs.length,
-                              separatorBuilder: (context, index) =>
-                                  const SizedBox(width: 8),
-                              itemBuilder: (context, index) {
-                                final pair = dynamicQuickPairs[index];
-                                final isSelected = pair.$1 == activeFrom &&
-                                    pair.$2 == activeTo;
-                                return InkWell(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    setState(() {
-                                      _selectedFrom = pair.$1;
-                                      _selectedTo = pair.$2;
-                                    });
-                                    final pairRate = convertState.rates
-                                            .convertBetween(
-                                          fromCurrency: pair.$1,
-                                          toCurrency: pair.$2,
-                                          amount: 1.0,
-                                        ) ??
-                                        unitRate;
-                                    context
-                                        .read<RatesCubit>()
-                                        .loadHistoricalRates(
-                                          fromCurrency: pair.$1,
-                                          toCurrency: pair.$2,
-                                          timeframe: _timeframes[
-                                              _selectedTimeframeIndex],
-                                          currentRate: pairRate,
-                                        );
-                                  },
-                                  borderRadius: BorderRadius.circular(20.0),
-                                  child: AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 150),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14.0,
-                                      vertical: 7.0,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      gradient: isSelected
-                                          ? _pillSelectedGradient
-                                          : null,
-                                      color: isSelected
-                                          ? null
-                                          : (isLight
-                                              ? const Color(0xFFF9FAFB)
-                                              : surfaceColor),
-                                      borderRadius:
-                                          BorderRadius.circular(20.0),
-                                      border: isSelected
-                                          ? null
-                                          : Border.all(
-                                              color: pillUnselectedBorder,
-                                              width: 1.0,
-                                            ),
-                                      boxShadow: isSelected
-                                          ? [
-                                              BoxShadow(
-                                                color: const Color(0xFFFF3366)
-                                                    .withValues(alpha: 0.35),
-                                                blurRadius: 10,
-                                                offset: const Offset(0, 3),
+                    return RefreshIndicator(
+                      color: primaryLightColor,
+                      onRefresh: () async {
+                        final ratesCubit = context.read<RatesCubit>();
+                        final convertCubit = context.read<ConvertCubit>();
+                        await convertCubit.refreshRates(forceRefresh: true);
+                        final latestConvertState = convertCubit.state;
+                        final freshRate = latestConvertState is ConvertLoaded
+                            ? (latestConvertState.rates.convertBetween(
+                                    fromCurrency: activeFrom,
+                                    toCurrency: activeTo,
+                                    amount: 1.0) ??
+                                unitRate)
+                            : unitRate;
+
+                        await ratesCubit.loadHistoricalRates(
+                          fromCurrency: activeFrom,
+                          toCurrency: activeTo,
+                          timeframe: _timeframes[_selectedTimeframeIndex],
+                          currentRate: freshRate,
+                        );
+                      },
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // 1. Dynamic Quick Access Pair Selector Pills (Height 34.0)
+                            SizedBox(
+                              height: 34.0,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: dynamicQuickPairs.length,
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(width: 8),
+                                itemBuilder: (context, index) {
+                                  final pair = dynamicQuickPairs[index];
+                                  final isSelected = pair.$1 == activeFrom &&
+                                      pair.$2 == activeTo;
+                                  return InkWell(
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      setState(() {
+                                        _selectedFrom = pair.$1;
+                                        _selectedTo = pair.$2;
+                                      });
+                                      final pairRate = convertState.rates
+                                              .convertBetween(
+                                            fromCurrency: pair.$1,
+                                            toCurrency: pair.$2,
+                                            amount: 1.0,
+                                          ) ??
+                                          unitRate;
+                                      context
+                                          .read<RatesCubit>()
+                                          .loadHistoricalRates(
+                                            fromCurrency: pair.$1,
+                                            toCurrency: pair.$2,
+                                            timeframe: _timeframes[
+                                                _selectedTimeframeIndex],
+                                            currentRate: pairRate,
+                                          );
+                                    },
+                                    borderRadius: BorderRadius.circular(20.0),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 150),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14.0,
+                                        vertical: 7.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: isSelected
+                                            ? _pillSelectedGradient
+                                            : null,
+                                        color: isSelected
+                                            ? null
+                                            : (isLight
+                                                ? const Color(0xFFF9FAFB)
+                                                : surfaceColor),
+                                        borderRadius:
+                                            BorderRadius.circular(20.0),
+                                        border: isSelected
+                                            ? null
+                                            : Border.all(
+                                                color: pillUnselectedBorder,
+                                                width: 1.0,
                                               ),
-                                            ]
-                                          : null,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '${pair.$1}/${pair.$2}',
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: isSelected
-                                              ? FontWeight.w600
-                                              : FontWeight.w500,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : labelMutedColor,
+                                        boxShadow: isSelected
+                                            ? [
+                                                BoxShadow(
+                                                  color: const Color(0xFFFF3366)
+                                                      .withValues(alpha: 0.35),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 3),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${pair.$1}/${pair.$2}',
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.w500,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : labelMutedColor,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          // 2. Main Interactive Rate & Chart Card
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: !isLight
-                                ? AppColors.neonCardDecoration(
-                                    color: surfaceColor,
-                                    borderColor: cardBorderColor,
-                                    glow: true,
-                                    borderRadius: 20,
-                                  )
-                                : BoxDecoration(
-                                    color: surfaceColor,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                        color: cardBorderColor, width: 1.2),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.03),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Header with Flag Selector Chips & Rate (Overflow-Proof)
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              _buildFlagPill(
-                                                code: activeFrom,
-                                                isLight: isLight,
-                                                surfaceAlt: surfaceAlt,
-                                                borderColor:
-                                                    pillUnselectedBorder,
-                                                onTap: () => _pickCurrency(
-                                                  context: context,
-                                                  isSource: true,
-                                                  availableCodes: convertState
-                                                      .rates.rates.keys
-                                                      .toSet(),
-                                                  activeFrom: activeFrom,
-                                                  activeTo: activeTo,
-                                                ),
-                                              ),
-                                              const Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                    horizontal: 6),
-                                                child: Icon(
-                                                  CupertinoIcons.arrow_right,
-                                                  size: 14,
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                ),
-                                              ),
-                                              _buildFlagPill(
-                                                code: activeTo,
-                                                isLight: isLight,
-                                                surfaceAlt: surfaceAlt,
-                                                borderColor:
-                                                    pillUnselectedBorder,
-                                                onTap: () => _pickCurrency(
-                                                  context: context,
-                                                  isSource: false,
-                                                  availableCodes: convertState
-                                                      .rates.rates.keys
-                                                      .toSet(),
-                                                  activeFrom: activeFrom,
-                                                  activeTo: activeTo,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              '1 $activeFrom = ${CurrencyFormatter.formatRateDynamic(loadedState.current)} $activeTo',
-                                              style: TextStyle(
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.w700,
-                                                letterSpacing: -0.5,
-                                                color: isLight
-                                                    ? const Color(0xFF111827)
-                                                    : Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                            // 2. Main Interactive Rate & Chart Card
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: !isLight
+                                  ? AppColors.neonCardDecoration(
+                                      color: surfaceColor,
+                                      borderColor: cardBorderColor,
+                                      glow: true,
+                                      borderRadius: 20,
+                                    )
+                                  : BoxDecoration(
+                                      color: surfaceColor,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                          color: cardBorderColor, width: 1.2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.03),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      flex: 0,
-                                      child: Container(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Header Row with Currency Selector Chips & Top-Right Percentage Badge
+                                  Row(
+                                    children: [
+                                      _buildFlagPill(
+                                        code: activeFrom,
+                                        isLight: isLight,
+                                        surfaceAlt: surfaceAlt,
+                                        borderColor: pillUnselectedBorder,
+                                        onTap: () => _pickCurrency(
+                                          context: context,
+                                          isSource: true,
+                                          availableCodes: convertState
+                                              .rates.rates.keys
+                                              .toSet(),
+                                          activeFrom: activeFrom,
+                                          activeTo: activeTo,
+                                        ),
+                                      ),
+                                      const Padding(
+                                        padding:
+                                            EdgeInsets.symmetric(horizontal: 6),
+                                        child: Icon(
+                                          CupertinoIcons.arrow_right,
+                                          size: 14,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      _buildFlagPill(
+                                        code: activeTo,
+                                        isLight: isLight,
+                                        surfaceAlt: surfaceAlt,
+                                        borderColor: pillUnselectedBorder,
+                                        onTap: () => _pickCurrency(
+                                          context: context,
+                                          isSource: false,
+                                          availableCodes: convertState
+                                              .rates.rates.keys
+                                              .toSet(),
+                                          activeFrom: activeFrom,
+                                          activeTo: activeTo,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      // Percentage Badge strictly at top-right
+                                      Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 8,
                                           vertical: 5,
@@ -541,25 +710,50 @@ class _RatesScreenState extends State<RatesScreen> {
                                                   : AppColors.deltaNegative,
                                             ),
                                             const SizedBox(width: 3),
-                                            FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              child: Text(
-                                                '${loadedState.isPositive ? '+' : ''}${loadedState.delta.toStringAsFixed(2)}%',
-                                                style: TextStyle(
-                                                  fontSize: 11.5,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: loadedState.isPositive
-                                                      ? AppColors.deltaPositive
-                                                      : AppColors.deltaNegative,
-                                                ),
+                                            Text(
+                                              '${loadedState.isPositive ? '+' : ''}${loadedState.delta.toStringAsFixed(2)}%',
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: loadedState.isPositive
+                                                    ? AppColors.deltaPositive
+                                                    : AppColors.deltaNegative,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Rate Text with Compact Offline Mode Badge
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            '1 $activeFrom = ${CurrencyFormatter.formatRateDynamic(loadedState.current)} $activeTo',
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: -0.5,
+                                              color: isLight
+                                                  ? const Color(0xFF111827)
+                                                  : Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (loadedState.isCached) ...[
+                                        const SizedBox(width: 8),
+                                        _buildOfflineBadge(isLight: isLight),
+                                      ],
+                                    ],
+                                  ),
                                 const SizedBox(height: 18),
 
                                 // Polished Timeframe Segmented Control
@@ -719,7 +913,8 @@ class _RatesScreenState extends State<RatesScreen> {
                           ),
                         ],
                       ),
-                    );
+                    ),
+                  );
                   },
                 );
               },
@@ -783,6 +978,50 @@ class _RatesScreenState extends State<RatesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildOfflineBadge({required bool isLight}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+      decoration: BoxDecoration(
+        color: isLight
+            ? const Color(0xFFFEF3C7)
+            : const Color(0xFFD97706).withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(6.0),
+        border: Border.all(
+          color: isLight
+              ? const Color(0xFFFDE68A)
+              : const Color(0xFFD97706).withValues(alpha: 0.40),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 6.0,
+            height: 6.0,
+            decoration: const BoxDecoration(
+              color: Color(0xFFD97706),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4.0),
+          Text(
+            'Offline Mode',
+            style: TextStyle(
+              fontSize: 10.0,
+              fontWeight: FontWeight.w500,
+              color: isLight
+                  ? const Color(0xFFD97706)
+                  : const Color(0xFFFBBF24),
+              letterSpacing: -0.1,
+            ),
+          ),
+        ],
       ),
     );
   }

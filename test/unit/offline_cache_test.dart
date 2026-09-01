@@ -144,5 +144,60 @@ void main() {
       expect(low, 277.50);
       expect(avg, closeTo(277.94, 0.05));
     });
+
+    test('HistoricalRatesRepository falls back to cached historical series for pair+timeframe when offline',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final cacheDataSource = CurrencyCacheDataSourceImpl(prefs);
+
+      final now = DateTime.now();
+      final cachedPoints = [
+        HistoricalRatePoint(
+          date: now.subtract(const Duration(days: 3)),
+          rate: 1.08,
+          baseCurrency: 'EUR',
+          targetCurrency: 'USD',
+          isCached: true,
+        ),
+        HistoricalRatePoint(
+          date: now.subtract(const Duration(days: 2)),
+          rate: 1.09,
+          baseCurrency: 'EUR',
+          targetCurrency: 'USD',
+          isCached: true,
+        ),
+        HistoricalRatePoint(
+          date: now.subtract(const Duration(days: 1)),
+          rate: 1.085,
+          baseCurrency: 'EUR',
+          targetCurrency: 'USD',
+          isCached: true,
+        ),
+      ];
+
+      await cacheDataSource.saveHistoricalRatePoints(
+        fromCurrency: 'EUR',
+        toCurrency: 'USD',
+        timeframe: '24H',
+        points: cachedPoints,
+      );
+
+      final repository = HistoricalRatesRepositoryImpl(
+        MockFailingHistoricalRemoteDataSource(),
+        cacheDataSource,
+      );
+
+      final result = await repository.getHistoricalRates(
+        fromCurrency: 'EUR',
+        toCurrency: 'USD',
+        timeframe: '24H',
+      );
+
+      expect(result.length, 3);
+      expect(result.first.rate, 1.08);
+      expect(result.last.rate, 1.085);
+      expect(result.every((p) => p.isCached), isTrue);
+    });
   });
 }

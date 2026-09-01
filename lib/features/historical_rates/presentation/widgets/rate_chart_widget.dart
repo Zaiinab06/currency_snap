@@ -29,6 +29,20 @@ class RateChartWidget extends StatelessWidget {
     }).toList();
   }
 
+  /// Calculates 4-5 evenly spaced visible label indices for uncluttered X-axis display across any timeframe.
+  static Set<int> calculateVisibleLabelIndices(int totalPoints) {
+    if (totalPoints <= 7) {
+      return List.generate(totalPoints, (i) => i).toSet();
+    }
+    const targetIntervals = 4; // produces 5 points: 0, 1/4, 2/4, 3/4, 4/4
+    final Set<int> indices = {0, totalPoints - 1};
+    for (int i = 1; i < targetIntervals; i++) {
+      final idx = ((totalPoints - 1) * i / targetIntervals).round();
+      indices.add(idx);
+    }
+    return indices;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -44,6 +58,8 @@ class RateChartWidget extends StatelessWidget {
     if (spots.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final visibleIndices = calculateVisibleLabelIndices(ratePoints.length);
 
     final ratesValues = ratePoints.map((p) => p.rate).toList();
     final minRate = ratesValues.reduce((a, b) => a < b ? a : b);
@@ -181,7 +197,10 @@ class RateChartWidget extends StatelessWidget {
                 interval: 1,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
-                  if (index < 0 || index >= ratePoints.length) {
+                  if (value != index.toDouble() ||
+                      index < 0 ||
+                      index >= ratePoints.length ||
+                      !visibleIndices.contains(index)) {
                     return const SizedBox.shrink();
                   }
                   return Padding(

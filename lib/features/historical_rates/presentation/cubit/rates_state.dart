@@ -22,6 +22,7 @@ class HistoricalRatesLoaded extends RatesState {
   final String fromCurrency;
   final String toCurrency;
   final String timeframe;
+  final bool isCached;
 
   HistoricalRatesLoaded({
     List<RatePoint>? ratePoints,
@@ -29,6 +30,7 @@ class HistoricalRatesLoaded extends RatesState {
     this.fromCurrency = 'USD',
     this.toCurrency = 'EUR',
     this.timeframe = '7D',
+    this.isCached = false,
   }) : ratePoints = List.unmodifiable(
           List<RatePoint>.from(ratePoints ?? rates ?? const [])
             ..sort((a, b) => a.date.compareTo(b.date)),
@@ -73,6 +75,7 @@ class HistoricalRatesLoaded extends RatesState {
         fromCurrency,
         toCurrency,
         timeframe,
+        isCached,
       ];
 }
 
@@ -85,3 +88,8 @@ class RatesError extends RatesState {
   @override
   List<Object?> get props => [message];
 }
+
+typedef RatesLoadingState = RatesLoading;
+typedef RatesErrorState = RatesError;
+typedef RatesLoadedState = HistoricalRatesLoaded;
+typedef RatesInitialState = RatesInitial;

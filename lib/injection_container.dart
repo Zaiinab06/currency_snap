@@ -210,6 +210,9 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   );
 
   sl.registerFactory<RatesCubit>(
-    () => RatesCubit(sl<GetHistoricalRatesUseCase>()),
+    () => RatesCubit(
+      sl<GetHistoricalRatesUseCase>(),
+      connectivity: sl<Connectivity>(),
+    ),
   );
 }

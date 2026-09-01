@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/errors/app_exceptions.dart';
 import '../../../converter/data/datasources/currency_cache_datasource.dart';
 import '../../domain/entities/historical_rate_point.dart';
 import '../../domain/repositories/historical_rates_repository.dart';
 import '../datasources/historical_rates_remote_datasource.dart';
 
-/// Implementation coordinating real multi-date API queries and aligning the latest chronological point with live current rate.
+/// Implementation coordinating real multi-date API queries, local caching fallback, and aligning the latest chronological point with live current rate.
 class HistoricalRatesRepositoryImpl implements HistoricalRatesRepository {
   final HistoricalRatesRemoteDataSource _remoteDataSource;
   final CurrencyCacheDataSource _cacheDataSource;
@@ -36,14 +37,14 @@ class HistoricalRatesRepositoryImpl implements HistoricalRatesRepository {
               .subtract(Duration(days: 6 - i)),
         ),
       '1M' => List.generate(
-          6,
+          31,
           (i) => DateTime(now.year, now.month, now.day)
-              .subtract(Duration(days: (5 - i) * 6)),
+              .subtract(Duration(days: 30 - i)),
         ),
       '1Y' => List.generate(
-          7,
+          12,
           (i) => DateTime(now.year, now.month, now.day)
-              .subtract(Duration(days: (6 - i) * 52)),
+              .subtract(Duration(days: (11 - i) * 30)),
         ),
       _ => List.generate(
           7,
@@ -53,61 +54,114 @@ class HistoricalRatesRepositoryImpl implements HistoricalRatesRepository {
     };
 
     final List<HistoricalRatePoint> resultPoints = [];
+    bool remoteFailed = false;
 
-    for (final date in targetDates) {
-      // 1. Check unique date-level cache key (e.g. USD_PKR_2026_08_25)
-      final cachedRate = _cacheDataSource.getCachedDatePoint(
+    // 1. Genuine remote API query for authentic time-series rates
+    try {
+      final startDate = targetDates.first;
+      final endDate = targetDates.last;
+
+      if (timeframe == '1M' || timeframe == '7D') {
+        final remoteSeries = await _remoteDataSource.getTimeSeriesRates(
+          fromCurrency: fromCurrency,
+          toCurrency: toCurrency,
+          startDate: startDate,
+          endDate: endDate,
+        );
+
+        for (final point in remoteSeries) {
+          if (point.rate.isFinite && !point.rate.isNaN && point.rate > 0) {
+            resultPoints.add(point);
+            await _cacheDataSource.saveDatePoint(
+              fromCurrency: fromCurrency,
+              toCurrency: toCurrency,
+              date: point.date,
+              rate: point.rate,
+            );
+          }
+        }
+      } else {
+        // Query specific dates (24H and 1Y)
+        for (final date in targetDates) {
+          try {
+            final remotePoint = await _remoteDataSource.getRateForDate(
+              fromCurrency: fromCurrency,
+              toCurrency: toCurrency,
+              date: date,
+            );
+
+            if (remotePoint.rate.isFinite &&
+                !remotePoint.rate.isNaN &&
+                remotePoint.rate > 0) {
+              resultPoints.add(remotePoint);
+              await _cacheDataSource.saveDatePoint(
+                fromCurrency: fromCurrency,
+                toCurrency: toCurrency,
+                date: date,
+                rate: remotePoint.rate,
+              );
+            }
+          } catch (_) {
+            remoteFailed = true;
+          }
+        }
+      }
+    } catch (e) {
+      remoteFailed = true;
+      debugPrint('Remote historical API failed: $e');
+    }
+
+    // 2. Offline-First Fallback: load authentic cached historical series for ${base}_${target}_${timeframe}
+    if (resultPoints.isEmpty || (remoteFailed && resultPoints.length < targetDates.length)) {
+      final cachedSeries = _cacheDataSource.getCachedHistoricalRatePoints(
         fromCurrency: fromCurrency,
         toCurrency: toCurrency,
-        date: date,
+        timeframe: timeframe,
       );
-
-      if (cachedRate != null &&
-          cachedRate.isFinite &&
-          !cachedRate.isNaN &&
-          cachedRate > 0) {
-        resultPoints.add(HistoricalRatePoint(
-          date: date,
-          rate: cachedRate,
-          baseCurrency: fromCurrency,
-          targetCurrency: toCurrency,
-        ));
-        continue;
+      if (cachedSeries != null && cachedSeries.isNotEmpty) {
+        if (resultPoints.isEmpty) {
+          resultPoints.addAll(cachedSeries);
+        } else {
+          // Merge missing dates from authentic cached series
+          final existingDateKeys =
+              resultPoints.map((p) => _formatDate(p.date)).toSet();
+          for (final cachedPoint in cachedSeries) {
+            if (!existingDateKeys.contains(_formatDate(cachedPoint.date))) {
+              resultPoints.add(cachedPoint);
+            }
+          }
+        }
       }
+    }
 
-      // 2. Fetch authentic rate for this specific date
-      try {
-        final remotePoint = await _remoteDataSource.getRateForDate(
+    // 3. Fallback to individual authentic date-level cache entries if series cache was not found
+    if (resultPoints.isEmpty) {
+      for (final date in targetDates) {
+        final cachedRate = _cacheDataSource.getCachedDatePoint(
           fromCurrency: fromCurrency,
           toCurrency: toCurrency,
           date: date,
         );
 
-        if (remotePoint.rate.isFinite &&
-            !remotePoint.rate.isNaN &&
-            remotePoint.rate > 0) {
-          final pointWithCurrencies = HistoricalRatePoint(
-            date: remotePoint.date,
-            rate: remotePoint.rate,
+        if (cachedRate != null &&
+            cachedRate.isFinite &&
+            !cachedRate.isNaN &&
+            cachedRate > 0) {
+          resultPoints.add(HistoricalRatePoint(
+            date: date,
+            rate: cachedRate,
             baseCurrency: fromCurrency,
             targetCurrency: toCurrency,
-          );
-          resultPoints.add(pointWithCurrencies);
-          await _cacheDataSource.saveDatePoint(
-            fromCurrency: fromCurrency,
-            toCurrency: toCurrency,
-            date: date,
-            rate: remotePoint.rate,
-          );
+            isCached: true,
+          ));
         }
-      } catch (e) {
-        debugPrint('Unable to fetch rate for date $date: $e');
       }
     }
 
+    // 4. If NO authentic local cache exists at all for that pair/timeframe, throw NoCachedDataException
     if (resultPoints.isEmpty) {
-      throw Exception(
-        'Failed to load authentic historical data for $fromCurrency/$toCurrency ($timeframe)',
+      throw const NoCachedDataException(
+        'Unable to load historical rates. Please check your connection.',
       );
     }
 
@@ -136,6 +190,17 @@ class HistoricalRatesRepositoryImpl implements HistoricalRatesRepository {
         rate: currentRate,
         baseCurrency: fromCurrency,
         targetCurrency: toCurrency,
+        isCached: lastPoint.isCached,
+      );
+    }
+
+    // Save full series if remote was successful to ensure offline availability for this pair + timeframe
+    if (!remoteFailed && validatedList.isNotEmpty) {
+      await _cacheDataSource.saveHistoricalRatePoints(
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        timeframe: timeframe,
+        points: validatedList,
       );
     }
 

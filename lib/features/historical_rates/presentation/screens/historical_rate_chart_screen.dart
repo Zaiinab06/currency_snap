@@ -8,6 +8,7 @@ import '../cubit/rates_cubit.dart';
 import '../cubit/rates_state.dart';
 import '../widgets/market_metrics_card.dart';
 import '../widgets/rate_chart_widget.dart';
+import '../widgets/rates_error_widget.dart';
 
 /// Screen displaying interactive 7-day rate trend and dynamic high/low stats based on real API time-series points.
 class HistoricalRateChartScreen extends StatelessWidget {
@@ -76,11 +77,11 @@ class HistoricalRateChartScreen extends StatelessWidget {
             }
 
             if (state is RatesError) {
-              return Center(
-                child: Text(
-                  state.message,
-                  style: TextStyle(color: labelMutedColor),
-                ),
+              return RatesErrorWidget(
+                message: state.message,
+                onRetry: () {
+                  context.read<RatesCubit>().retry();
+                },
               );
             }
 
@@ -143,13 +144,67 @@ class HistoricalRateChartScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Current Rate',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: labelMutedColor,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Current Rate',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: labelMutedColor,
+                                        ),
+                                      ),
+                                      if (loadedState.isCached) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6.0, vertical: 2.0),
+                                          decoration: BoxDecoration(
+                                            color: isLight
+                                                ? const Color(0xFFFEF3C7)
+                                                : const Color(0xFFD97706)
+                                                    .withValues(alpha: 0.22),
+                                            borderRadius:
+                                                BorderRadius.circular(6.0),
+                                            border: Border.all(
+                                              color: isLight
+                                                  ? const Color(0xFFFDE68A)
+                                                  : const Color(0xFFD97706)
+                                                      .withValues(alpha: 0.40),
+                                              width: 1.0,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                width: 6.0,
+                                                height: 6.0,
+                                                decoration:
+                                                    const BoxDecoration(
+                                                  color: Color(0xFFD97706),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4.0),
+                                              Text(
+                                                'Offline Mode',
+                                                style: TextStyle(
+                                                  fontSize: 10.0,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: isLight
+                                                      ? const Color(0xFFD97706)
+                                                      : const Color(0xFFFBBF24),
+                                                  letterSpacing: -0.1,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   FittedBox(

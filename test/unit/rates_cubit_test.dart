@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:currency_snap/core/utils/currency_formatter.dart';
 import 'package:currency_snap/features/historical_rates/domain/entities/historical_rate_point.dart';
@@ -7,9 +9,28 @@ import 'package:currency_snap/features/historical_rates/presentation/cubit/rates
 import 'package:currency_snap/features/historical_rates/presentation/cubit/rates_state.dart';
 import 'package:currency_snap/features/historical_rates/presentation/widgets/rate_chart_widget.dart';
 
+class MockConnectivity implements Connectivity {
+  final StreamController<List<ConnectivityResult>> _controller =
+      StreamController<List<ConnectivityResult>>.broadcast();
+
+  void emitConnectivity(List<ConnectivityResult> results) {
+    _controller.add(results);
+  }
+
+  @override
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => _controller.stream;
+
+  @override
+  Future<List<ConnectivityResult>> checkConnectivity() async => [ConnectivityResult.wifi];
+
+  void dispose() {
+    _controller.close();
+  }
+}
+
 class MockHistoricalRatesRepository implements HistoricalRatesRepository {
   final List<HistoricalRatePoint> dummyPoints;
-  final bool shouldFail;
+  bool shouldFail;
 
   MockHistoricalRatesRepository({
     this.dummyPoints = const [],
@@ -31,6 +52,7 @@ class MockHistoricalRatesRepository implements HistoricalRatesRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('HistoricalRatesLoaded Single Source of Truth Architecture', () {
     test('accurately derives high, low, average, current, and percentChange from ratePoints', () {
       final now = DateTime.now();
@@ -212,6 +234,82 @@ void main() {
       );
 
       expect(cubit.state, isA<RatesError>());
+      final error = cubit.state as RatesError;
+      expect(error.message, contains('API error'));
+    });
+
+    test('automatically retries fetching historical rates when connectivity is restored', () async {
+      final now = DateTime.now();
+      final points = [
+        HistoricalRatePoint(date: now.subtract(const Duration(days: 1)), rate: 0.90),
+        HistoricalRatePoint(date: now, rate: 0.91),
+      ];
+      final mockConnectivity = MockConnectivity();
+      final repository = MockHistoricalRatesRepository(
+        dummyPoints: points,
+        shouldFail: true,
+      );
+      final useCase = GetHistoricalRatesUseCase(repository);
+      final cubit = RatesCubit(useCase, connectivity: mockConnectivity);
+
+      // 1. Initial attempt fails
+      await cubit.loadHistoricalRates(
+        fromCurrency: 'USD',
+        toCurrency: 'EUR',
+        timeframe: '7D',
+      );
+      expect(cubit.state, isA<RatesError>());
+
+      // 2. Fix repository failure and restore connectivity
+      repository.shouldFail = false;
+      mockConnectivity.emitConnectivity([ConnectivityResult.wifi]);
+
+      // Allow microtask / event loop to process
+      await pumpEventQueue();
+
+      expect(cubit.state, isA<HistoricalRatesLoaded>());
+      final loaded = cubit.state as HistoricalRatesLoaded;
+      expect(loaded.ratePoints.length, 2);
+      expect(loaded.fromCurrency, 'USD');
+      expect(loaded.toCurrency, 'EUR');
+
+      await cubit.close();
+      mockConnectivity.dispose();
+    });
+
+    test('retry method immediately emits RatesLoading and re-fetches historical rates', () async {
+      final now = DateTime.now();
+      final points = [
+        HistoricalRatePoint(date: now.subtract(const Duration(days: 1)), rate: 0.90),
+        HistoricalRatePoint(date: now, rate: 0.91),
+      ];
+      final repository = MockHistoricalRatesRepository(
+        dummyPoints: points,
+        shouldFail: true,
+      );
+      final useCase = GetHistoricalRatesUseCase(repository);
+      final cubit = RatesCubit(useCase);
+
+      // Initial attempt fails
+      await cubit.loadHistoricalRates(
+        fromCurrency: 'USD',
+        toCurrency: 'EUR',
+        timeframe: '7D',
+      );
+      expect(cubit.state, isA<RatesError>());
+
+      // Fix failure and call retry
+      repository.shouldFail = false;
+      final retryFuture = cubit.retry();
+      // Should immediately be in loading state
+      expect(cubit.state, isA<RatesLoading>());
+
+      await retryFuture;
+      expect(cubit.state, isA<HistoricalRatesLoaded>());
+      final loaded = cubit.state as HistoricalRatesLoaded;
+      expect(loaded.ratePoints.length, 2);
+
+      await cubit.close();
     });
   });
 }

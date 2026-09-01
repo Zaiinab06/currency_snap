@@ -35,29 +35,92 @@ class HistoricalRatesRemoteDataSourceImpl
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final List<HistoricalRatePoint> points = [];
-    final totalDays = endDate.difference(startDate).inDays;
+    final fromUpper = fromCurrency.toUpperCase();
+    final toUpper = toCurrency.toUpperCase();
+    final startStr = _formatDate(startDate);
+    final endStr = _formatDate(endDate);
 
-    for (int i = 0; i <= totalDays; i++) {
-      final date = startDate.add(Duration(days: i));
-      try {
-        final point = await getRateForDate(
+    // 1. Primary time-series endpoint: Frankfurter range API (fast, single HTTP request for supported pairs)
+    final frankfurterRangeUrl =
+        'https://api.frankfurter.app/$startStr..$endStr?from=$fromUpper&to=$toUpper';
+
+    debugPrint('Historical range API URL: $frankfurterRangeUrl');
+
+    try {
+      final response = await _dio.get(
+        frankfurterRangeUrl,
+        options: Options(
+          sendTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(seconds: 8),
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final dynamic data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
+
+        if (data is Map) {
+          final ratesMap = data['rates'];
+          if (ratesMap is Map && ratesMap.isNotEmpty) {
+            final List<HistoricalRatePoint> rangePoints = [];
+            ratesMap.forEach((dateKey, val) {
+              if (val is Map) {
+                final rateNum = val[toUpper];
+                final parsedDate = DateTime.tryParse(dateKey.toString());
+                if (rateNum is num &&
+                    rateNum.toDouble() > 0 &&
+                    parsedDate != null) {
+                  rangePoints.add(HistoricalRatePoint(
+                    date: DateTime(
+                        parsedDate.year, parsedDate.month, parsedDate.day),
+                    rate: rateNum.toDouble(),
+                    baseCurrency: fromCurrency,
+                    targetCurrency: toCurrency,
+                  ));
+                }
+              }
+            });
+
+            if (rangePoints.isNotEmpty) {
+              rangePoints.sort((a, b) => a.date.compareTo(b.date));
+              return rangePoints;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint(
+          'Frankfurter range API unavailable or unsupported for $fromUpper/$toUpper: $e');
+    }
+
+    // 2. Open Currency Universal API with parallel genuine date fetching
+    final totalDays = endDate.difference(startDate).inDays;
+    final List<DateTime> dates = List.generate(
+      totalDays + 1,
+      (i) => startDate.add(Duration(days: i)),
+    );
+
+    final futures = dates.map((date) => getRateForDate(
           fromCurrency: fromCurrency,
           toCurrency: toCurrency,
           date: date,
-        );
-        points.add(point);
-      } catch (e) {
-        debugPrint('Failed to fetch rate for $date: $e');
-      }
-    }
+        ).then<HistoricalRatePoint?>((p) => p).catchError((e) {
+          debugPrint('Failed to fetch rate for $date: $e');
+          return null;
+        }));
+
+    final fetched = await Future.wait(futures);
+    final List<HistoricalRatePoint> points =
+        fetched.whereType<HistoricalRatePoint>().toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
 
     if (points.isNotEmpty) {
       return points;
     }
 
     throw Exception(
-      'Unable to fetch historical time-series for $fromCurrency/$toCurrency between ${_formatDate(startDate)} and ${_formatDate(endDate)}',
+      'Unable to fetch historical time-series for $fromCurrency/$toCurrency between $startStr and $endStr',
     );
   }
 

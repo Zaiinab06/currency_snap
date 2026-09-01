@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/app_exceptions.dart';
+import '../../../historical_rates/domain/entities/historical_rate_point.dart';
 import '../models/currency_rate_model.dart';
 
 /// Contract for local currency cache data source.
@@ -22,6 +23,17 @@ abstract class CurrencyCacheDataSource {
     required String fromCurrency,
     required String toCurrency,
     required DateTime date,
+  });
+  Future<void> saveHistoricalRatePoints({
+    required String fromCurrency,
+    required String toCurrency,
+    required String timeframe,
+    required List<HistoricalRatePoint> points,
+  });
+  List<HistoricalRatePoint>? getCachedHistoricalRatePoints({
+    required String fromCurrency,
+    required String toCurrency,
+    required String timeframe,
   });
   List<double> getHistoricalPoints({
     required String fromCurrency,
@@ -154,6 +166,42 @@ class CurrencyCacheDataSourceImpl implements CurrencyCacheDataSource {
     return _prefs.getDouble(key);
   }
 
+  String _historicalSeriesKey(String from, String to, String timeframe) {
+    return 'historical_series_${from.toUpperCase()}_${to.toUpperCase()}_${timeframe.toUpperCase()}';
+  }
+
+  @override
+  Future<void> saveHistoricalRatePoints({
+    required String fromCurrency,
+    required String toCurrency,
+    required String timeframe,
+    required List<HistoricalRatePoint> points,
+  }) async {
+    final key = _historicalSeriesKey(fromCurrency, toCurrency, timeframe);
+    final jsonList = points.map((p) => p.toJson()).toList();
+    await _prefs.setString(key, jsonEncode(jsonList));
+  }
+
+  @override
+  List<HistoricalRatePoint>? getCachedHistoricalRatePoints({
+    required String fromCurrency,
+    required String toCurrency,
+    required String timeframe,
+  }) {
+    final key = _historicalSeriesKey(fromCurrency, toCurrency, timeframe);
+    final jsonString = _prefs.getString(key);
+    if (jsonString == null || jsonString.isEmpty) return null;
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonString) as List<dynamic>;
+      final points = decoded
+          .map((item) => HistoricalRatePoint.fromJson(item as Map<String, dynamic>))
+          .toList();
+      return points.isNotEmpty ? points : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   List<double> getHistoricalPoints({
     required String fromCurrency,
@@ -163,8 +211,8 @@ class CurrencyCacheDataSourceImpl implements CurrencyCacheDataSource {
   }) {
     final int requiredCount = switch (timeframe) {
       '24H' => 5,
-      '1M' => 5,
-      '1Y' => 5,
+      '1M' => 30,
+      '1Y' => 12,
       '7D' => 7,
       _ => 7,
     };
