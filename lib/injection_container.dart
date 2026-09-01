@@ -17,6 +17,11 @@ import 'features/favorites/domain/repositories/favorites_repository.dart';
 import 'features/favorites/domain/usecases/get_favorites_usecase.dart';
 import 'features/favorites/domain/usecases/toggle_favorite_usecase.dart';
 import 'features/favorites/presentation/cubit/favorites_cubit.dart';
+import 'features/historical_rates/data/datasources/historical_rates_remote_datasource.dart';
+import 'features/historical_rates/data/repositories/historical_rates_repository_impl.dart';
+import 'features/historical_rates/domain/repositories/historical_rates_repository.dart';
+import 'features/historical_rates/domain/usecases/get_historical_rates_usecase.dart';
+import 'features/historical_rates/presentation/cubit/rates_cubit.dart';
 import 'features/history/data/datasources/history_local_datasource.dart';
 import 'features/history/data/repositories/history_repository_impl.dart';
 import 'features/history/domain/repositories/history_repository.dart';
@@ -86,7 +91,29 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     );
   }
 
-  // 3. Feature: Favorites
+  // 3. Feature: Historical Rates
+  if (!sl.isRegistered<HistoricalRatesRemoteDataSource>()) {
+    sl.registerLazySingleton<HistoricalRatesRemoteDataSource>(
+      () => HistoricalRatesRemoteDataSourceImpl(dio: sl<Dio>()),
+    );
+  }
+
+  if (!sl.isRegistered<HistoricalRatesRepository>()) {
+    sl.registerLazySingleton<HistoricalRatesRepository>(
+      () => HistoricalRatesRepositoryImpl(
+        sl<HistoricalRatesRemoteDataSource>(),
+        sl<CurrencyCacheDataSource>(),
+      ),
+    );
+  }
+
+  if (!sl.isRegistered<GetHistoricalRatesUseCase>()) {
+    sl.registerLazySingleton<GetHistoricalRatesUseCase>(
+      () => GetHistoricalRatesUseCase(sl<HistoricalRatesRepository>()),
+    );
+  }
+
+  // 4. Feature: Favorites
   if (!sl.isRegistered<FavoritesLocalDataSource>()) {
     sl.registerLazySingleton<FavoritesLocalDataSource>(
       () => FavoritesLocalDataSourceImpl(sl<SharedPreferences>()),
@@ -113,7 +140,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     );
   }
 
-  // 4. Feature: History
+  // 5. Feature: History
   if (!sl.isRegistered<HistoryLocalDataSource>()) {
     sl.registerLazySingleton<HistoryLocalDataSource>(
       () => HistoryLocalDataSourceImpl(sl<SharedPreferences>()),
@@ -146,7 +173,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     );
   }
 
-  // 5. Feature: Settings
+  // 6. Feature: Settings
   if (!sl.isRegistered<SettingsLocalDataSource>()) {
     sl.registerLazySingleton<SettingsLocalDataSource>(
       () => SettingsLocalDataSourceImpl(sl<SharedPreferences>()),
@@ -161,7 +188,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
     );
   }
 
-  // 6. Presentation Cubits (Factory for dynamic lifecycles)
+  // 7. Presentation Cubits (Factory for dynamic lifecycles)
   sl.registerFactory<ConvertCubit>(
     () => ConvertCubit(
       sl<GetLiveRatesUseCase>(),
@@ -180,5 +207,9 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
 
   sl.registerFactory<SettingsCubit>(
     () => SettingsCubit(sl<SettingsRepository>()),
+  );
+
+  sl.registerFactory<RatesCubit>(
+    () => RatesCubit(sl<GetHistoricalRatesUseCase>()),
   );
 }

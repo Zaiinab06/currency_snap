@@ -111,7 +111,7 @@ void main() {
         timeframe: '7D',
         currentRate: 0.92,
       );
-      expect(points.length, 7);
+      expect(points.length, 2);
       expect(points.last, 0.92);
     });
   });

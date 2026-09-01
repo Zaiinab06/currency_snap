@@ -12,6 +12,17 @@ abstract class CurrencyCacheDataSource {
   DateTime? getLastSyncTime();
   bool hasCachedRates();
   Future<void> clearCache();
+  Future<void> saveDatePoint({
+    required String fromCurrency,
+    required String toCurrency,
+    required DateTime date,
+    required double rate,
+  });
+  double? getCachedDatePoint({
+    required String fromCurrency,
+    required String toCurrency,
+    required DateTime date,
+  });
   List<double> getHistoricalPoints({
     required String fromCurrency,
     required String toCurrency,
@@ -115,6 +126,34 @@ class CurrencyCacheDataSourceImpl implements CurrencyCacheDataSource {
     await _prefs.remove(AppConstants.cacheKeyTimestamp);
   }
 
+  String _datePointKey(String from, String to, DateTime dt) {
+    final y = dt.year.toString().padLeft(4, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    return '${from.toUpperCase()}_${to.toUpperCase()}_${y}_${m}_$d';
+  }
+
+  @override
+  Future<void> saveDatePoint({
+    required String fromCurrency,
+    required String toCurrency,
+    required DateTime date,
+    required double rate,
+  }) async {
+    final key = _datePointKey(fromCurrency, toCurrency, date);
+    await _prefs.setDouble(key, rate);
+  }
+
+  @override
+  double? getCachedDatePoint({
+    required String fromCurrency,
+    required String toCurrency,
+    required DateTime date,
+  }) {
+    final key = _datePointKey(fromCurrency, toCurrency, date);
+    return _prefs.getDouble(key);
+  }
+
   @override
   List<double> getHistoricalPoints({
     required String fromCurrency,
@@ -160,25 +199,10 @@ class CurrencyCacheDataSourceImpl implements CurrencyCacheDataSource {
       } catch (_) {}
     }
 
-    // Ensure the latest point is currentRate
-    if (extractedRates.isEmpty || extractedRates.last != currentRate) {
-      extractedRates.add(currentRate);
-    }
-
     if (extractedRates.length >= requiredCount) {
       return extractedRates.sublist(extractedRates.length - requiredCount);
     }
 
-    // If fewer real historical snapshots are recorded yet,
-    // interpolate gracefully from the earliest known recorded rate to currentRate
-    final startRate = extractedRates.first;
-    final List<double> interpolated = [];
-    final steps = requiredCount - 1;
-    for (int i = 0; i <= steps; i++) {
-      final t = i / steps;
-      final point = startRate + (currentRate - startRate) * t;
-      interpolated.add(point);
-    }
-    return interpolated;
+    return extractedRates;
   }
 }

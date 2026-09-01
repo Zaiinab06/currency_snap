@@ -24,6 +24,15 @@ void main() {
       expect(formatRate(0.003456, decimalDigits: 6), '0.003456');
     });
 
+    test('formatRateDynamic formats rates < 10 with 4 decimals and >= 10 with 2 decimals', () {
+      expect(formatRateDynamic(1.0825), '1.0825');
+      expect(formatRateDynamic(0.7850), '0.7850');
+      expect(formatRateDynamic(9.9999), '9.9999');
+      expect(formatRateDynamic(10.0), '10.00');
+      expect(formatRateDynamic(277.55), '277.55');
+      expect(formatRateDynamic(154.20), '154.20');
+    });
+
     test('formatCompact formats large amounts compactly', () {
       expect(formatCompact(1500), '1.5K');
       expect(formatCompact(2500000), '2.5M');

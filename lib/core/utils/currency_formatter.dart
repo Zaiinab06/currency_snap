@@ -33,6 +33,14 @@ class CurrencyFormatter {
     return formatter.format(rate).trim();
   }
 
+  /// Formats an exchange rate dynamically: 4 decimal places for rates < 10, and 2 decimal places for rates >= 10.
+  static String formatRateDynamic(double rate) {
+    if (rate.abs() < 10) {
+      return formatRate(rate, decimalDigits: 4);
+    }
+    return formatRate(rate, decimalDigits: 2);
+  }
+
   /// Formats large figures into compact representations (e.g. 1.2M, 500K).
   static String formatCompact(double amount) {
     final formatter = NumberFormat.compact();
@@ -147,6 +155,10 @@ String formatAmount(double amount, {int decimalDigits = 2}) =>
 /// Formats an exchange rate with high precision (default 4 decimal places).
 String formatRate(double rate, {int decimalDigits = 4}) =>
     CurrencyFormatter.formatRate(rate, decimalDigits: decimalDigits);
+
+/// Formats an exchange rate dynamically (4 decimals for rates < 10, 2 decimals for rates >= 10).
+String formatRateDynamic(double rate) =>
+    CurrencyFormatter.formatRateDynamic(rate);
 
 /// Formats large figures into compact representations (e.g. 1.2M, 500K).
 String formatCompact(double amount) => CurrencyFormatter.formatCompact(amount);

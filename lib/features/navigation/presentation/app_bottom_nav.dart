@@ -35,7 +35,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
         isDark ? AppColors.darkBackground : AppColors.lightBackground;
     final navBg =
         isDark ? AppColors.darkNavBackground : AppColors.lightNavBackground;
-    const activeColor = Color(0xFFFF6B8A);
+    const activeColor = Color(0xFFFF3366);
     final inactiveColor =
         isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final indicatorColor =

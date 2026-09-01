@@ -1,11 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../injection_container.dart' as di;
-import '../../../converter/data/datasources/currency_cache_datasource.dart';
+import '../cubit/rates_cubit.dart';
+import '../cubit/rates_state.dart';
+import '../widgets/market_metrics_card.dart';
 import '../widgets/rate_chart_widget.dart';
 
-/// Screen displaying interactive 7-day rate trend and dynamic high/low stats based on real rate points.
+/// Screen displaying interactive 7-day rate trend and dynamic high/low stats based on real API time-series points.
 class HistoricalRateChartScreen extends StatelessWidget {
   final String fromCurrency;
   final String toCurrency;
@@ -24,260 +28,233 @@ class HistoricalRateChartScreen extends StatelessWidget {
     final isLight = theme.brightness == Brightness.light;
     final isDark = !isLight;
     final scaffoldBg =
-        isLight ? theme.scaffoldBackgroundColor : AppColors.scaffoldBackground;
+        isLight ? const Color(0xFFF9FAFB) : AppColors.scaffoldBackground;
     final surfaceColor =
         isLight ? Colors.white : AppColors.darkCardSurface;
-    final borderColor = isLight
-        ? Colors.black.withValues(alpha: 0.06)
+    final cardBorderColor = isLight
+        ? const Color(0xFFF3F4F6)
         : AppColors.darkBorder;
     final labelMutedColor =
-        isLight ? const Color(0xFF64748B) : AppColors.textSecondary;
+        isLight ? const Color(0xFF6B7280) : AppColors.textSecondary;
 
-    List<double> points = [];
-    try {
-      points = di.sl<CurrencyCacheDataSource>().getHistoricalPoints(
-            fromCurrency: fromCurrency,
-            toCurrency: toCurrency,
-            timeframe: '7D',
-            currentRate: currentRate,
-          );
-    } catch (_) {
-      points = [currentRate, currentRate];
-    }
-
-    final high = points.reduce((a, b) => a > b ? a : b);
-    final low = points.reduce((a, b) => a < b ? a : b);
-    final firstRate = points.first;
-    final deltaPercent = firstRate > 0
-        ? ((currentRate - firstRate) / firstRate) * 100.0
-        : 0.0;
-    final isPositive = deltaPercent >= 0;
-    final deltaStr =
-        '${isPositive ? '+' : ''}${deltaPercent.toStringAsFixed(2)}%';
-
-    return Scaffold(
-      backgroundColor: scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: scaffoldBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(CupertinoIcons.chevron_back),
-          onPressed: () => Navigator.of(context).maybePop(),
+    return BlocProvider(
+      create: (context) => di.sl<RatesCubit>()
+        ..loadHistoricalRates(
+          fromCurrency: fromCurrency,
+          toCurrency: toCurrency,
+          timeframe: '7D',
+          currentRate: currentRate,
         ),
-        title: Text(
-          '$fromCurrency to $toCurrency Trend',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: theme.colorScheme.onSurface,
+      child: Scaffold(
+        backgroundColor: scaffoldBg,
+        appBar: AppBar(
+          backgroundColor: scaffoldBg,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              CupertinoIcons.chevron_back,
+              color: isLight ? const Color(0xFF111827) : Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          title: Text(
+            '$fromCurrency to $toCurrency Trend',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              letterSpacing: -0.4,
+              color: isLight ? const Color(0xFF111827) : Colors.white,
+            ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: isDark
-                  ? AppColors.neonCardDecoration(
-                      color: surfaceColor,
-                      borderColor: borderColor,
-                      glow: true,
-                      borderRadius: 20,
-                    )
-                  : BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: borderColor, width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        body: BlocBuilder<RatesCubit, RatesState>(
+          builder: (context, state) {
+            if (state is RatesLoading) {
+              return const Center(
+                child: CircularProgressIndicator(color: Color(0xFFFF4B72)),
+              );
+            }
+
+            if (state is RatesError) {
+              return Center(
+                child: Text(
+                  state.message,
+                  style: TextStyle(color: labelMutedColor),
+                ),
+              );
+            }
+
+            final loadedState = state is HistoricalRatesLoaded
+                ? state
+                : HistoricalRatesLoaded(
+                    ratePoints: const [],
+                    fromCurrency: fromCurrency,
+                    toCurrency: toCurrency,
+                    timeframe: '7D',
+                  );
+
+            if (loadedState.rates.isEmpty) {
+              return Center(
+                child: Text(
+                  'No historical rate data available.',
+                  style: TextStyle(color: labelMutedColor),
+                ),
+              );
+            }
+
+            final deltaStr =
+                '${loadedState.isPositive ? '+' : ''}${loadedState.delta.toStringAsFixed(2)}%';
+
+            return SafeArea(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(20),
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Current Rate',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: labelMutedColor,
-                            ),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: isDark
+                        ? AppColors.neonCardDecoration(
+                            color: surfaceColor,
+                            borderColor: cardBorderColor,
+                            glow: true,
+                            borderRadius: 20,
+                          )
+                        : BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: cardBorderColor, width: 1.2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '1 $fromCurrency = ${currentRate > 100 ? currentRate.toStringAsFixed(2) : currentRate.toStringAsFixed(4)} $toCurrency',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.4,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isPositive
-                              ? AppColors.deltaPositive.withValues(alpha: 0.18)
-                              : AppColors.deltaNegative.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              isPositive
-                                  ? CupertinoIcons.arrow_up_right
-                                  : CupertinoIcons.arrow_down_right,
-                              size: 16,
-                              color: isPositive
-                                  ? AppColors.deltaPositive
-                                  : AppColors.deltaNegative,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Current Rate',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: labelMutedColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      '1 $fromCurrency = ${CurrencyFormatter.formatRateDynamic(loadedState.current)} $toCurrency',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.5,
+                                        color: isLight
+                                            ? const Color(0xFF111827)
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              deltaStr,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: isPositive
-                                    ? AppColors.deltaPositive
-                                    : AppColors.deltaNegative,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              flex: 0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: loadedState.isPositive
+                                      ? AppColors.deltaPositive
+                                          .withValues(alpha: 0.18)
+                                      : AppColors.deltaNegative
+                                          .withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      loadedState.isPositive
+                                          ? CupertinoIcons.arrow_up_right
+                                          : CupertinoIcons.arrow_down_right,
+                                      size: 14,
+                                      color: loadedState.isPositive
+                                          ? AppColors.deltaPositive
+                                          : AppColors.deltaNegative,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        deltaStr,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: loadedState.isPositive
+                                              ? AppColors.deltaPositive
+                                              : AppColors.deltaNegative,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 24),
+                        RateChartWidget(
+                          fromCurrency: fromCurrency,
+                          toCurrency: toCurrency,
+                          ratePoints: loadedState.ratePoints,
+                          timeframe: '7D',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: MarketMetricsCard(
+                          title: '7D High',
+                          value: CurrencyFormatter.formatRateDynamic(
+                              loadedState.high),
+                          accentColor: AppColors.deltaPositive,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: MarketMetricsCard(
+                          title: '7D Low',
+                          value: CurrencyFormatter.formatRateDynamic(
+                              loadedState.low),
+                          accentColor: AppColors.deltaNegative,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  RateChartWidget(
-                    fromCurrency: fromCurrency,
-                    toCurrency: toCurrency,
-                    currentRate: currentRate,
-                    customPoints: points,
-                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMetricCard(
-                    context,
-                    '7D High',
-                    high.toStringAsFixed(currentRate > 100 ? 2 : 4),
-                    AppColors.deltaPositive,
-                    isDark,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildMetricCard(
-                    context,
-                    '7D Low',
-                    low.toStringAsFixed(currentRate > 100 ? 2 : 4),
-                    AppColors.deltaNegative,
-                    isDark,
-                  ),
-                ),
-              ],
-            ),
-          ],
+            );
+          },
         ),
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(
-    BuildContext context,
-    String label,
-    String value,
-    Color accentColor,
-    bool isDark,
-  ) {
-    final theme = Theme.of(context);
-    final surfaceColor =
-        isDark ? AppColors.darkCardSurface : theme.cardColor;
-    final borderColor =
-        isDark ? AppColors.darkBorder : theme.dividerColor;
-    final labelMutedColor = isDark
-        ? AppColors.darkTextSecondary
-        : theme.colorScheme.onSurfaceVariant;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: isDark
-          ? AppColors.neonCardDecoration(
-              color: surfaceColor,
-              borderColor: borderColor,
-              glow: false,
-              borderRadius: 16,
-            )
-          : BoxDecoration(
-              color: surfaceColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: borderColor, width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: labelMutedColor,
-                ),
-              ),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              letterSpacing: -0.2,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-        ],
       ),
     );
   }
