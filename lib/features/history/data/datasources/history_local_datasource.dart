@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -5,6 +6,7 @@ import '../models/conversion_history_model.dart';
 
 /// Contract for conversion history local data source.
 abstract class HistoryLocalDataSource {
+  Stream<List<ConversionHistoryModel>> get historyStream;
   Future<List<ConversionHistoryModel>> getHistory();
   Future<void> addHistory(ConversionHistoryModel item);
   Future<void> deleteHistoryItem(String id);
@@ -14,10 +16,16 @@ abstract class HistoryLocalDataSource {
 /// Local data source responsible for persisting and managing conversion history logs.
 class HistoryLocalDataSourceImpl implements HistoryLocalDataSource {
   final SharedPreferences _prefs;
+  final _historyStreamController =
+      StreamController<List<ConversionHistoryModel>>.broadcast();
 
   HistoryLocalDataSourceImpl(this._prefs);
 
   static const int _maxHistoryCount = 50;
+
+  @override
+  Stream<List<ConversionHistoryModel>> get historyStream =>
+      _historyStreamController.stream;
 
   @override
   Future<List<ConversionHistoryModel>> getHistory() async {
@@ -71,11 +79,13 @@ class HistoryLocalDataSourceImpl implements HistoryLocalDataSource {
   @override
   Future<void> clearHistory() async {
     await _prefs.remove(AppConstants.prefKeyHistory);
+    _historyStreamController.add(const []);
   }
 
   Future<void> _saveAll(List<ConversionHistoryModel> items) async {
     final jsonString =
         jsonEncode(items.map((item) => item.toJson()).toList());
     await _prefs.setString(AppConstants.prefKeyHistory, jsonString);
+    _historyStreamController.add(List.unmodifiable(items));
   }
 }

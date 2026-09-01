@@ -10,6 +10,10 @@ class HistoryRepositoryImpl implements HistoryRepository {
   HistoryRepositoryImpl(this._localDataSource);
 
   @override
+  Stream<List<ConversionHistoryEntity>> get historyStream =>
+      _localDataSource.historyStream;
+
+  @override
   Future<List<ConversionHistoryEntity>> getHistory() async {
     return _localDataSource.getHistory();
   }

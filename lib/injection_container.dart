@@ -28,6 +28,7 @@ import 'features/history/domain/repositories/history_repository.dart';
 import 'features/history/domain/usecases/add_history_usecase.dart';
 import 'features/history/domain/usecases/clear_history_usecase.dart';
 import 'features/history/domain/usecases/get_history_usecase.dart';
+import 'features/history/presentation/cubit/history_cubit.dart';
 import 'features/settings/data/datasources/settings_local_datasource.dart';
 import 'features/settings/data/repositories/settings_repository_impl.dart';
 import 'features/settings/domain/repositories/settings_repository.dart';
@@ -203,6 +204,10 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       sl<GetFavoritesUseCase>(),
       sl<ToggleFavoriteUseCase>(),
     ),
+  );
+
+  sl.registerFactory<HistoryCubit>(
+    () => HistoryCubit(sl<HistoryRepository>()),
   );
 
   sl.registerFactory<SettingsCubit>(

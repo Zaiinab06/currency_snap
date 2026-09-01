@@ -23,10 +23,12 @@ class FavoritePairEntity extends Equatable {
     required double rate,
     DateTime? savedAt,
   }) {
+    final from = fromCurrency.toUpperCase();
+    final to = toCurrency.toUpperCase();
     return FavoritePairEntity(
-      id: '${fromCurrency}_$toCurrency',
-      fromCurrency: fromCurrency,
-      toCurrency: toCurrency,
+      id: '${from}_$to',
+      fromCurrency: from,
+      toCurrency: to,
       rate: rate,
       savedAt: savedAt ?? DateTime.now(),
     );

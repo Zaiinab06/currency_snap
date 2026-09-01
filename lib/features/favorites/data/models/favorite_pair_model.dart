@@ -17,10 +17,12 @@ class FavoritePairModel extends FavoritePairEntity {
     required double rate,
     DateTime? savedAt,
   }) {
+    final from = fromCurrency.toUpperCase();
+    final to = toCurrency.toUpperCase();
     return FavoritePairModel(
-      id: '${fromCurrency}_$toCurrency',
-      fromCurrency: fromCurrency,
-      toCurrency: toCurrency,
+      id: '${from}_$to',
+      fromCurrency: from,
+      toCurrency: to,
       rate: rate,
       savedAt: savedAt ?? DateTime.now(),
     );

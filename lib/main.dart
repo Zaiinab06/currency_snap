@@ -9,6 +9,7 @@ import 'features/converter/presentation/screens/splash_screen.dart';
 import 'features/favorites/domain/repositories/favorites_repository.dart';
 import 'features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'features/history/domain/repositories/history_repository.dart';
+import 'features/history/presentation/cubit/history_cubit.dart';
 import 'features/settings/domain/repositories/settings_repository.dart';
 import 'features/settings/presentation/cubit/settings_cubit.dart';
 import 'features/settings/presentation/cubit/settings_state.dart';
@@ -52,6 +53,9 @@ class CurrencySnapApp extends StatelessWidget {
           ),
           BlocProvider<FavoritesCubit>(
             create: (_) => di.sl<FavoritesCubit>(),
+          ),
+          BlocProvider<HistoryCubit>(
+            create: (_) => di.sl<HistoryCubit>(),
           ),
         ],
         child: BlocBuilder<SettingsCubit, SettingsState>(
