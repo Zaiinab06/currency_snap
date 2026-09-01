@@ -1,9 +1,11 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/network/dio_client.dart';
 import 'core/network/network_info.dart';
+import 'core/services/widget_service.dart';
 import 'features/converter/data/datasources/currency_cache_datasource.dart';
 import 'features/converter/data/datasources/currency_remote_datasource.dart';
 import 'features/converter/data/repositories/converter_repository_impl.dart';
@@ -37,11 +39,27 @@ import 'features/settings/presentation/cubit/settings_cubit.dart';
 final sl = GetIt.instance;
 
 /// Initializes all service locator dependencies across Core and Feature slices.
-Future<void> initServiceLocator({SharedPreferences? prefs}) async {
+Future<void> initServiceLocator({
+  SharedPreferences? prefs,
+  Box<Map>? favoritesBox,
+  Box<Map>? historyBox,
+}) async {
   // 1. External & Core
   final sharedPreferences = prefs ?? await SharedPreferences.getInstance();
   if (!sl.isRegistered<SharedPreferences>()) {
     sl.registerSingleton<SharedPreferences>(sharedPreferences);
+  }
+
+  Box<Map>? favBox = favoritesBox;
+  Box<Map>? histBox = historyBox;
+  try {
+    if (favBox == null && histBox == null) {
+      await Hive.initFlutter();
+      favBox = await Hive.openBox<Map>('favorites_box');
+      histBox = await Hive.openBox<Map>('history_box');
+    }
+  } catch (_) {
+    // Non-blocking in pure unit test environments without paths
   }
 
   if (!sl.isRegistered<Dio>()) {
@@ -55,6 +73,12 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   if (!sl.isRegistered<NetworkInfo>()) {
     sl.registerLazySingleton<NetworkInfo>(
       () => NetworkInfoImpl(sl<Connectivity>()),
+    );
+  }
+
+  if (!sl.isRegistered<IWidgetSyncService>()) {
+    sl.registerLazySingleton<IWidgetSyncService>(
+      () => WidgetServiceImpl(),
     );
   }
 
@@ -117,7 +141,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   // 4. Feature: Favorites
   if (!sl.isRegistered<FavoritesLocalDataSource>()) {
     sl.registerLazySingleton<FavoritesLocalDataSource>(
-      () => FavoritesLocalDataSourceImpl(sl<SharedPreferences>()),
+      () => FavoritesLocalDataSourceImpl(favBox, sl<SharedPreferences>()),
     );
   }
 
@@ -144,7 +168,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
   // 5. Feature: History
   if (!sl.isRegistered<HistoryLocalDataSource>()) {
     sl.registerLazySingleton<HistoryLocalDataSource>(
-      () => HistoryLocalDataSourceImpl(sl<SharedPreferences>()),
+      () => HistoryLocalDataSourceImpl(histBox, sl<SharedPreferences>()),
     );
   }
 
@@ -196,6 +220,7 @@ Future<void> initServiceLocator({SharedPreferences? prefs}) async {
       sl<ConvertCurrencyUseCase>(),
       sl<FavoritesRepository>(),
       sl<HistoryRepository>(),
+      widgetSyncService: sl<IWidgetSyncService>(),
     ),
   );
 

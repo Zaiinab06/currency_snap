@@ -66,12 +66,12 @@ class AppColors {
   static const Color onAccent = Color(0xFFFFFFFF);
   static const Color onSurface = Color(0xFFFFFFFF);
 
-  /// Neon card decoration utility.
+  /// Subtle neutral card decoration utility for dark mode surfaces.
   static BoxDecoration neonCardDecoration({
     Color? color,
     Color? borderColor,
     double borderRadius = 18.0,
-    bool glow = true,
+    bool glow = false,
     BorderSide? borderSide,
   }) {
     return BoxDecoration(
@@ -83,28 +83,13 @@ class AppColors {
               color: borderColor ?? cardBorder,
               width: 1.2,
             ),
-      boxShadow: glow
-          ? [
-              BoxShadow(
-                color: neonPurple.withValues(alpha: 0.18),
-                blurRadius: 16,
-                spreadRadius: -2,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: neonPink.withValues(alpha: 0.10),
-                blurRadius: 24,
-                spreadRadius: -4,
-                offset: const Offset(0, 8),
-              ),
-            ]
-          : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.25),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ],
     );
   }
 }

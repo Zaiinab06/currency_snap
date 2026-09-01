@@ -70,6 +70,14 @@ class SettingsLocalDataSourceImpl implements SettingsLocalDataSource {
   @override
   Future<void> clearRatesCache() async {
     await _prefs.remove(AppConstants.cacheKeyRates);
+    await _prefs.remove(AppConstants.cacheKeyPreviousRates);
+    await _prefs.remove(AppConstants.cacheKeyRateSnapshots);
     await _prefs.remove(AppConstants.cacheKeyTimestamp);
+    final keys = _prefs.getKeys();
+    for (final key in keys) {
+      if (key.startsWith('historical_series_') || RegExp(r'^[A-Z]{3}_[A-Z]{3}_\d{4}').hasMatch(key)) {
+        await _prefs.remove(key);
+      }
+    }
   }
 }

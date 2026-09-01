@@ -49,7 +49,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _amountController = TextEditingController(text: '100');
     _amountFocusNode = FocusNode();
-    context.read<ConvertCubit>().loadRates();
+    final settings = context.read<SettingsCubit>().state;
+    context.read<ConvertCubit>().loadRates(
+          fromCurrency: settings.defaultBaseCurrency,
+          toCurrency: settings.defaultTargetCurrency,
+        );
     context.read<FavoritesCubit>().loadFavorites();
     _initAutoFocus();
   }
@@ -606,9 +610,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.25)
+                      : Colors.black.withValues(alpha: 0.04),
+                  blurRadius: isDark ? 6 : 16,
+                  offset: isDark ? const Offset(0, 2) : const Offset(0, 4),
                 ),
               ],
             ),

@@ -81,12 +81,12 @@ class _AppBottomNavState extends State<AppBottomNav> {
           destinations: [
             NavigationDestination(
               icon: Icon(
-                CupertinoIcons.arrow_right_arrow_left,
+                CupertinoIcons.house,
                 color: inactiveColor,
-                size: 21,
+                size: 22,
               ),
               selectedIcon: const Icon(
-                CupertinoIcons.arrow_right_arrow_left,
+                CupertinoIcons.house_fill,
                 color: activeColor,
                 size: 22,
               ),

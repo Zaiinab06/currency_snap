@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:currency_snap/core/constants/app_constants.dart';
+import 'dart:io';
 import 'package:currency_snap/features/history/data/datasources/history_local_datasource.dart';
 import 'package:currency_snap/features/history/data/models/conversion_history_model.dart';
 import 'package:currency_snap/features/history/data/repositories/history_repository_impl.dart';
@@ -7,24 +6,47 @@ import 'package:currency_snap/features/history/domain/entities/conversion_histor
 import 'package:currency_snap/features/history/presentation/cubit/history_cubit.dart';
 import 'package:currency_snap/features/history/presentation/cubit/history_state.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  late Directory tempDir;
+  late Box<Map> historyBox;
   late SharedPreferences prefs;
   late HistoryLocalDataSourceImpl localDataSource;
   late HistoryRepositoryImpl repository;
 
+  setUpAll(() {
+    tempDir = Directory.systemTemp.createTempSync('hive_hist_test_');
+    Hive.init(tempDir.path);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
-    localDataSource = HistoryLocalDataSourceImpl(prefs);
+    historyBox = await Hive.openBox<Map>(
+        'history_test_${DateTime.now().microsecondsSinceEpoch}');
+    localDataSource = HistoryLocalDataSourceImpl(historyBox, prefs);
     repository = HistoryRepositoryImpl(localDataSource);
   });
 
+  tearDown(() async {
+    if (historyBox.isOpen) {
+      await historyBox.deleteFromDisk();
+    }
+  });
+
   group('Conversion History Flow & Persistence Verification', () {
-    test('Records all required conversion fields accurately in SharedPreferences', () async {
+    test('Records all required conversion fields accurately in structured Hive box', () async {
       final now = DateTime(2026, 9, 1, 12, 0, 0);
       final item = ConversionHistoryEntity.create(
         fromCurrency: 'USD',
@@ -37,12 +59,9 @@ void main() {
 
       await repository.addHistory(item);
 
-      final storedJson = prefs.getString(AppConstants.prefKeyHistory);
-      expect(storedJson, isNotNull);
-
-      final List<dynamic> decoded = jsonDecode(storedJson!);
-      expect(decoded.length, 1);
-      final entry = decoded.first as Map<String, dynamic>;
+      // Verify stored Map in Hive box
+      expect(historyBox.containsKey(item.id), isTrue);
+      final entry = historyBox.get(item.id)!;
       expect(entry['fromCurrency'], 'USD');
       expect(entry['toCurrency'], 'PKR');
       expect(entry['fromAmount'], 100.0);

@@ -17,25 +17,30 @@ class ConvertCubit extends Cubit<ConvertState> {
   final ConvertCurrencyUseCase _convertCurrencyUseCase;
   final FavoritesRepository _favoritesRepository;
   final HistoryRepository _historyRepository;
+  final IWidgetSyncService _widgetSyncService;
 
   ConvertCubit(
     this._getLiveRatesUseCase,
     this._convertCurrencyUseCase,
     this._favoritesRepository,
-    this._historyRepository,
-  ) : super(const ConvertInitial());
+    this._historyRepository, {
+    IWidgetSyncService? widgetSyncService,
+  })  : _widgetSyncService = widgetSyncService ?? WidgetServiceImpl(),
+        super(const ConvertInitial());
 
   /// Convenience constructor taking repository contracts directly.
   factory ConvertCubit.fromRepositories({
     required ConverterRepository converterRepository,
     required FavoritesRepository favoritesRepository,
     required HistoryRepository historyRepository,
+    IWidgetSyncService? widgetSyncService,
   }) {
     return ConvertCubit(
       GetLiveRatesUseCase(converterRepository),
       const ConvertCurrencyUseCase(),
       favoritesRepository,
       historyRepository,
+      widgetSyncService: widgetSyncService,
     );
   }
 
@@ -247,7 +252,7 @@ class ConvertCubit extends Cubit<ConvertState> {
       final timeStr =
           'Synced at ${loadedState.lastSyncTime.hour.toString().padLeft(2, '0')}:${loadedState.lastSyncTime.minute.toString().padLeft(2, '0')}';
 
-      WidgetService.syncHomeWidget(
+      _widgetSyncService.syncHomeWidget(
         baseCurrency: loadedState.fromCurrency,
         targetCurrency: loadedState.toCurrency,
         rate: unitRate,

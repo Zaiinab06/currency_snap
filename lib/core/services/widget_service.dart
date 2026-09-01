@@ -3,16 +3,39 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
-class WidgetService {
+/// Abstract contract for home widget synchronization and deep-link communication.
+abstract class IWidgetSyncService {
+  Stream<bool> get autoFocusStream;
+  void initialize();
+  Future<bool> checkAutoFocusIntent();
+  Future<void> syncHomeWidget({
+    required String baseCurrency,
+    required String targetCurrency,
+    required double rate,
+    required String updatedTime,
+    double? amount,
+  });
+}
+
+/// Concrete implementation of [IWidgetSyncService] using platform channels and HomeWidget.
+class WidgetServiceImpl implements IWidgetSyncService {
   static const String androidWidgetName = 'CurrencyWidgetProvider';
-  static const MethodChannel _channel = MethodChannel('com.example.currency_snap/widget');
-  static final StreamController<bool> _autoFocusController =
-      StreamController<bool>.broadcast();
+  final MethodChannel _channel;
+  final StreamController<bool> _autoFocusController;
 
-  static Stream<bool> get autoFocusStream => _autoFocusController.stream;
+  WidgetServiceImpl({
+    MethodChannel? channel,
+    StreamController<bool>? autoFocusController,
+  })  : _channel =
+            channel ?? const MethodChannel('com.example.currency_snap/widget'),
+        _autoFocusController =
+            autoFocusController ?? StreamController<bool>.broadcast();
 
-  /// Initializes widget communication channel and click listeners.
-  static void initialize() {
+  @override
+  Stream<bool> get autoFocusStream => _autoFocusController.stream;
+
+  @override
+  void initialize() {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onAutoFocusAmount') {
         _autoFocusController.add(true);
@@ -31,10 +54,11 @@ class WidgetService {
     } catch (_) {}
   }
 
-  /// Checks if the app was launched from the widget with auto_focus_amount flag.
-  static Future<bool> checkAutoFocusIntent() async {
+  @override
+  Future<bool> checkAutoFocusIntent() async {
     try {
-      final bool? result = await _channel.invokeMethod<bool>('getAutoFocusAmount');
+      final bool? result =
+          await _channel.invokeMethod<bool>('getAutoFocusAmount');
       if (result == true) {
         return true;
       }
@@ -49,7 +73,8 @@ class WidgetService {
     return false;
   }
 
-  static Future<void> syncHomeWidget({
+  @override
+  Future<void> syncHomeWidget({
     required String baseCurrency,
     required String targetCurrency,
     required double rate,
@@ -73,7 +98,8 @@ class WidgetService {
       // Keys used by Kotlin for pair display & calculations
       await HomeWidget.saveWidgetData<String>('widget_base', baseCurrency);
       await HomeWidget.saveWidgetData<String>('widget_target', targetCurrency);
-      await HomeWidget.saveWidgetData<String>('widget_raw_rate', rate.toString());
+      await HomeWidget.saveWidgetData<String>(
+          'widget_raw_rate', rate.toString());
       await HomeWidget.saveWidgetData<String>(
         'widget_pair',
         '$baseCurrency → $targetCurrency',
@@ -93,4 +119,28 @@ class WidgetService {
       // Keep widget sync non-blocking and fail-safe
     }
   }
+}
+
+/// Static helper bridge for backward compatibility.
+class WidgetService {
+  static final IWidgetSyncService _instance = WidgetServiceImpl();
+
+  static Stream<bool> get autoFocusStream => _instance.autoFocusStream;
+  static void initialize() => _instance.initialize();
+  static Future<bool> checkAutoFocusIntent() =>
+      _instance.checkAutoFocusIntent();
+  static Future<void> syncHomeWidget({
+    required String baseCurrency,
+    required String targetCurrency,
+    required double rate,
+    required String updatedTime,
+    double? amount,
+  }) =>
+      _instance.syncHomeWidget(
+        baseCurrency: baseCurrency,
+        targetCurrency: targetCurrency,
+        rate: rate,
+        updatedTime: updatedTime,
+        amount: amount,
+      );
 }

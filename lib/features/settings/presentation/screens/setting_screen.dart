@@ -18,32 +18,298 @@ class SettingScreen extends StatefulWidget {
 }
 
 class _SettingScreenState extends State<SettingScreen> {
-  late final TextEditingController _nameController;
-  bool _isEditingName = false;
+  void _confirmClearCache(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-  @override
-  void initState() {
-    super.initState();
-    final initialName = context.read<SettingsCubit>().state.userDisplayName;
-    _nameController = TextEditingController(text: initialName);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _clearCache(BuildContext context) async {
-    await context.read<SettingsCubit>().clearRatesCache();
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Offline rate cache cleared successfully.'),
-          duration: Duration(seconds: 2),
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkCardSurface : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF450A0A)
+                    : const Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                CupertinoIcons.trash,
+                color: Color(0xFFEF4444),
+                size: 26,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Clear Offline Cache?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF1F2937),
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This will remove all cached exchange rates and historical snapshots from local storage.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark
+                    ? const Color(0xFF9CA3AF)
+                    : const Color(0xFF6B7280),
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: TextButton.styleFrom(
+                      backgroundColor: isDark
+                          ? const Color(0xFF374151)
+                          : const Color(0xFFF3F4F6),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark
+                            ? const Color(0xFFE5E7EB)
+                            : const Color(0xFF4B5563),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await context.read<SettingsCubit>().clearRatesCache();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Offline cache cleared successfully'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Clear Cache',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
+
+  void _showEditNameDialog(BuildContext context, String currentName) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final controller = TextEditingController(text: currentName);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkCardSurface : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top Icon Badge: Soft rose circular background with rose user icon
+            Center(
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF4C0519)
+                      : const Color(0xFFFFF1F2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  CupertinoIcons.person_fill,
+                  color: Color(0xFFE11D48),
+                  size: 28,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Edit Profile Name',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF1F2937),
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'This name appears in your personalized dashboard greeting.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark
+                    ? const Color(0xFF9CA3AF)
+                    : const Color(0xFF6B7280),
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Input TextField
+            TextField(
+              controller: controller,
+              autofocus: true,
+              cursorColor: const Color(0xFFE11D48),
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF1F2937),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: isDark
+                    ? AppColors.darkInputBox
+                    : const Color(0xFFF9FAFB),
+                hintText: 'Enter your name (e.g. Zainab)',
+                hintStyle: const TextStyle(
+                  color: Color(0xFF9CA3AF),
+                  fontSize: 14,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDark
+                        ? AppColors.darkBorder
+                        : const Color(0xFFE5E7EB),
+                    width: 1.0,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFE11D48),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 22),
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: TextButton.styleFrom(
+                      backgroundColor: isDark
+                          ? const Color(0xFF374151)
+                          : const Color(0xFFF3F4F6),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: isDark
+                            ? const Color(0xFFE5E7EB)
+                            : const Color(0xFF4B5563),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final newName = controller.text.trim();
+                      Navigator.pop(ctx);
+                      context
+                          .read<SettingsCubit>()
+                          .updateUserDisplayName(newName);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            newName.isNotEmpty
+                                ? 'Profile name updated to "$newName"'
+                                : 'Profile name cleared',
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE11D48),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _pickBaseCurrency(BuildContext context, String current) async {
@@ -78,23 +344,6 @@ class _SettingScreenState extends State<SettingScreen> {
     }
   }
 
-  void _saveDisplayName(BuildContext context) {
-    final newName = _nameController.text.trim();
-    context.read<SettingsCubit>().updateUserDisplayName(newName);
-    setState(() => _isEditingName = false);
-    FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          newName.isNotEmpty
-              ? 'Profile name updated to "$newName"'
-              : 'Profile name cleared',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -103,7 +352,6 @@ class _SettingScreenState extends State<SettingScreen> {
     final primaryLightColor = AppColors.neonPink;
     final textPrimary = theme.colorScheme.onSurface;
     final textSecondary = theme.colorScheme.onSurfaceVariant;
-    final cardBg = isDark ? AppColors.darkCardSurface : theme.cardColor;
     final cardBorder = isDark ? AppColors.darkBorder : theme.dividerColor;
 
     return Scaffold(
@@ -120,12 +368,7 @@ class _SettingScreenState extends State<SettingScreen> {
           ),
         ),
       ),
-      body: BlocConsumer<SettingsCubit, SettingsState>(
-        listener: (context, state) {
-          if (!_isEditingName && _nameController.text != state.userDisplayName) {
-            _nameController.text = state.userDisplayName;
-          }
-        },
+      body: BlocBuilder<SettingsCubit, SettingsState>(
         builder: (context, state) {
           final cubit = context.read<SettingsCubit>();
 
@@ -136,10 +379,9 @@ class _SettingScreenState extends State<SettingScreen> {
               // 1. Dynamic User Profile Card
               _buildSectionHeader(context, 'User Profile'),
               Container(
-                padding: const EdgeInsets.all(18),
                 decoration: isDark
                     ? AppColors.neonCardDecoration(
-                        color: cardBg,
+                        color: isDark ? AppColors.darkCardSurface : theme.cardColor,
                         borderColor: cardBorder,
                         glow: true,
                       )
@@ -150,10 +392,13 @@ class _SettingScreenState extends State<SettingScreen> {
                       ),
                 child: Material(
                   color: Colors.transparent,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                  child: InkWell(
+                    onTap: () =>
+                        _showEditNameDialog(context, state.userDisplayName),
+                    borderRadius: BorderRadius.circular(18),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(
                         children: [
                           Container(
                             width: 48,
@@ -220,88 +465,18 @@ class _SettingScreenState extends State<SettingScreen> {
                             ),
                           ),
                           IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _isEditingName = !_isEditingName;
-                              });
-                            },
+                            onPressed: () => _showEditNameDialog(
+                                context, state.userDisplayName),
                             icon: Icon(
-                              _isEditingName
-                                  ? CupertinoIcons.xmark_circle
-                                  : CupertinoIcons.pencil,
+                              CupertinoIcons.pencil,
                               color: primaryLightColor,
                               size: 22,
                             ),
-                            tooltip: _isEditingName ? 'Cancel' : 'Edit name',
+                            tooltip: 'Edit name',
                           ),
                         ],
                       ),
-                      if (_isEditingName) ...[
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.darkInputBox
-                                      : AppColors.lightInputBox,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color:
-                                        primaryColor.withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                child: TextField(
-                                  controller: _nameController,
-                                  autofocus: true,
-                                  style: TextStyle(
-                                    color: textPrimary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    hintText: 'Enter your display name...',
-                                    hintStyle: TextStyle(
-                                      color: AppColors.textMuted,
-                                      fontSize: 13,
-                                    ),
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  onSubmitted: (_) =>
-                                      _saveDisplayName(context),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () => _saveDisplayName(context),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryColor,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'Save',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -499,7 +674,7 @@ class _SettingScreenState extends State<SettingScreen> {
                           color: textSecondary,
                         ),
                       ),
-                      onTap: () => _clearCache(context),
+                      onTap: () => _confirmClearCache(context),
                     ),
                   ),
                 ],
@@ -545,10 +720,12 @@ class _SettingScreenState extends State<SettingScreen> {
                     iconColor: primaryLightColor,
                     title: 'Rate Provider',
                     trailing: Text(
-                      'Open Exchange Rates',
+                      'Frankfurter API',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: primaryLightColor,
+                        color: isDark
+                            ? const Color(0xFF9CA3AF)
+                            : const Color(0xFF6B7280),
                       ),
                     ),
                   ),
@@ -568,6 +745,7 @@ class _SettingScreenState extends State<SettingScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
             ],
           );
         },

@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:currency_snap/core/constants/app_constants.dart';
+import 'dart:io';
 import 'package:currency_snap/features/favorites/data/datasources/favorites_local_datasource.dart';
 import 'package:currency_snap/features/favorites/data/repositories/favorites_repository_impl.dart';
 import 'package:currency_snap/features/favorites/domain/entities/favorite_pair_entity.dart';
@@ -8,11 +7,14 @@ import 'package:currency_snap/features/favorites/domain/usecases/toggle_favorite
 import 'package:currency_snap/features/favorites/presentation/cubit/favorites_cubit.dart';
 import 'package:currency_snap/features/favorites/presentation/cubit/favorites_state.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  late Directory tempDir;
+  late Box<Map> favoritesBox;
   late SharedPreferences prefs;
   late FavoritesLocalDataSource localDataSource;
   late FavoritesRepositoryImpl repository;
@@ -20,22 +22,39 @@ void main() {
   late ToggleFavoriteUseCase toggleFavoriteUseCase;
   late FavoritesCubit favoritesCubit;
 
+  setUpAll(() {
+    tempDir = Directory.systemTemp.createTempSync('hive_fav_test_');
+    Hive.init(tempDir.path);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (tempDir.existsSync()) {
+      tempDir.deleteSync(recursive: true);
+    }
+  });
+
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
-    localDataSource = FavoritesLocalDataSourceImpl(prefs);
+    favoritesBox = await Hive.openBox<Map>(
+        'favorites_test_${DateTime.now().microsecondsSinceEpoch}');
+    localDataSource = FavoritesLocalDataSourceImpl(favoritesBox, prefs);
     repository = FavoritesRepositoryImpl(localDataSource);
     getFavoritesUseCase = GetFavoritesUseCase(repository);
     toggleFavoriteUseCase = ToggleFavoriteUseCase(repository);
     favoritesCubit = FavoritesCubit(getFavoritesUseCase, toggleFavoriteUseCase);
   });
 
-  tearDown(() {
-    favoritesCubit.close();
+  tearDown(() async {
+    await favoritesCubit.close();
+    if (favoritesBox.isOpen) {
+      await favoritesBox.deleteFromDisk();
+    }
   });
 
   group('Favorites Persistence & Storage Engine Verification', () {
-    test('Stores and retrieves favorites directly from SharedPreferences', () async {
+    test('Stores and retrieves favorites directly from structured Hive box', () async {
       final pair = FavoritePairEntity.create(
         fromCurrency: 'USD',
         toCurrency: 'PKR',
@@ -44,16 +63,13 @@ void main() {
 
       await repository.addFavorite(pair);
 
-      // Verify stored JSON string in SharedPreferences
-      final storedJson = prefs.getString(AppConstants.prefKeyFavorites);
-      expect(storedJson, isNotNull);
-
-      final List<dynamic> decoded = jsonDecode(storedJson!);
-      expect(decoded.length, 1);
-      expect(decoded.first['id'], 'USD_PKR');
-      expect(decoded.first['fromCurrency'], 'USD');
-      expect(decoded.first['toCurrency'], 'PKR');
-      expect(decoded.first['rate'], 278.25);
+      // Verify stored Map in Hive box
+      expect(favoritesBox.containsKey('USD_PKR'), isTrue);
+      final storedMap = favoritesBox.get('USD_PKR');
+      expect(storedMap, isNotNull);
+      expect(storedMap!['fromCurrency'], 'USD');
+      expect(storedMap['toCurrency'], 'PKR');
+      expect(storedMap['rate'], 278.25);
 
       // Verify retrieval through repository
       final result = await repository.getFavorites();
@@ -79,7 +95,7 @@ void main() {
       await repository.addFavorite(pair2);
 
       // 2. Simulate app kill & relaunch with fresh data sources and Cubit
-      final freshLocalSource = FavoritesLocalDataSourceImpl(prefs);
+      final freshLocalSource = FavoritesLocalDataSourceImpl(favoritesBox, prefs);
       final freshRepo = FavoritesRepositoryImpl(freshLocalSource);
       final freshGetUseCase = GetFavoritesUseCase(freshRepo);
       final freshToggleUseCase = ToggleFavoriteUseCase(freshRepo);
@@ -95,7 +111,7 @@ void main() {
       expect(freshCubit.isFavorite('GBP', 'JPY'), isTrue);
       expect(freshCubit.isFavorite('EUR', 'USD'), isFalse);
 
-      freshCubit.close();
+      await freshCubit.close();
     });
 
     test('Prevents duplicate entries when re-adding existing pair with updated rate or different casing', () async {
