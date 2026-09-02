@@ -85,7 +85,7 @@ class CurrencyRemoteDataSourceImpl implements CurrencyRemoteDataSource {
 
     try {
       final response = await _dio.get(
-        'https://api.frankfurter.app/$dateStr',
+        '${AppConstants.frankfurterBaseUrl}/$dateStr',
         queryParameters: {'from': effectiveBase},
         options: Options(
           sendTimeout: const Duration(seconds: 4),

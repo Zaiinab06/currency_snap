@@ -35,6 +35,19 @@
                 android:resource="@xml/currency_widget_info" />
         </receiver>
 
+        <!-- Watchlist Multi-Currency Widget Receiver -->
+        <receiver
+            android:name=".WatchlistWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="ACTION_REFRESH_WATCHLIST" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/watchlist_widget_info" />
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

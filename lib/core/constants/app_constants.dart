@@ -3,6 +3,9 @@ class AppConstants {
   AppConstants._();
 
   static const String apiBaseUrl = 'https://open.er-api.com/v6/latest';
+  static const String frankfurterBaseUrl = 'https://api.frankfurter.app';
+  static const String jsdelivrApiBaseUrl =
+      'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api';
   static const Duration apiTimeout = Duration(seconds: 10);
 
   static const String cacheKeyRates = 'cached_rates';

@@ -295,7 +295,8 @@ class _RatesScreenState extends State<RatesScreen> {
                               toCurrency: 'PKR',
                               amount: 1.0,
                             ) ??
-                            278.0;
+                            convertState.rates.rates['PKR'] ??
+                            1.0;
                         context.read<RatesCubit>().loadHistoricalRates(
                               fromCurrency: 'USD',
                               toCurrency: 'PKR',

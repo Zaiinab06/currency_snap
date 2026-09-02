@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="CURRENCYSNAP"
-            android:textColor="#8E8EA8"
+            android:textColor="#F43F5E"
             android:textSize="10sp"
             android:textStyle="bold" />
 
@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="● Live"
-            android:textColor="#00E676"
+            android:textColor="#10B981"
             android:textSize="10sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -62,7 +62,7 @@
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
             android:text="⇄ Swap"
-            android:textColor="#8C7CFF"
+            android:textColor="#FB7185"
             android:textSize="10sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -74,7 +74,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:text="1 USD = 277.66 PKR"
-        android:textColor="#8E8EA8"
+        android:textColor="#9CA3AF"
         android:textSize="10sp" />
 
     <!-- Main Display: Converted Amount Card -->
@@ -110,7 +110,7 @@
             android:minHeight="0dp"
             android:minWidth="0dp"
             android:text="+10"
-            android:textColor="#FFFFFF"
+            android:textColor="#F9FAFB"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -124,7 +124,7 @@
             android:minHeight="0dp"
             android:minWidth="0dp"
             android:text="+50"
-            android:textColor="#FFFFFF"
+            android:textColor="#F9FAFB"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -138,7 +138,7 @@
             android:minHeight="0dp"
             android:minWidth="0dp"
             android:text="+100"
-            android:textColor="#FFFFFF"
+            android:textColor="#F9FAFB"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -152,7 +152,7 @@
             android:minHeight="0dp"
             android:minWidth="0dp"
             android:text="C"
-            android:textColor="#FF5252"
+            android:textColor="#EF4444"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -164,7 +164,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:gravity="center"
-        android:textColor="#5E5E7A"
+        android:textColor="#6B7280"
         android:textSize="9sp" />
 
 </LinearLayout>

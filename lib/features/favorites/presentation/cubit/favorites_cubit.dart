@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/services/widget_service.dart';
 import '../../domain/entities/favorite_pair_entity.dart';
 import '../../domain/repositories/favorites_repository.dart';
 import '../../domain/usecases/get_favorites_usecase.dart';
@@ -9,17 +10,24 @@ import 'favorites_state.dart';
 class FavoritesCubit extends Cubit<FavoritesState> {
   final GetFavoritesUseCase _getFavoritesUseCase;
   final ToggleFavoriteUseCase _toggleFavoriteUseCase;
+  final IWidgetSyncService _widgetSyncService;
 
   FavoritesCubit(
     this._getFavoritesUseCase,
-    this._toggleFavoriteUseCase,
-  ) : super(FavoritesState.initial());
+    this._toggleFavoriteUseCase, {
+    IWidgetSyncService? widgetSyncService,
+  })  : _widgetSyncService = widgetSyncService ?? WidgetServiceImpl(),
+        super(FavoritesState.initial());
 
   /// Convenience factory from repository.
-  factory FavoritesCubit.fromRepository(FavoritesRepository repository) {
+  factory FavoritesCubit.fromRepository(
+    FavoritesRepository repository, {
+    IWidgetSyncService? widgetSyncService,
+  }) {
     return FavoritesCubit(
       GetFavoritesUseCase(repository),
       ToggleFavoriteUseCase(repository),
+      widgetSyncService: widgetSyncService,
     );
   }
 
@@ -35,6 +43,7 @@ class FavoritesCubit extends Cubit<FavoritesState> {
           errorMessage: null,
         ),
       );
+      _syncWatchlist(favorites);
     } catch (e) {
       emit(
         state.copyWith(
@@ -109,5 +118,24 @@ class FavoritesCubit extends Cubit<FavoritesState> {
       await addFavorite(newPair);
       return true;
     }
+  }
+
+  void _syncWatchlist(List<FavoritePairEntity> favorites) {
+    final now = DateTime.now();
+    final timeStr =
+        'Synced at ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final items = favorites.take(4).map((f) {
+      return WatchlistItemSync(
+        baseCurrency: f.fromCurrency,
+        targetCurrency: f.toCurrency,
+        rate: f.rate,
+        changePercentage: 0.0,
+      );
+    }).toList();
+
+    _widgetSyncService.syncWatchlistWidget(
+      items: items,
+      updatedTime: timeStr,
+    );
   }
 }

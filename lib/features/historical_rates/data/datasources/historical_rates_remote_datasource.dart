@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/historical_rate_point.dart';
 
@@ -42,7 +43,7 @@ class HistoricalRatesRemoteDataSourceImpl
 
     // 1. Primary time-series endpoint: Frankfurter range API (fast, single HTTP request for supported pairs)
     final frankfurterRangeUrl =
-        'https://api.frankfurter.app/$startStr..$endStr?from=$fromUpper&to=$toUpper';
+        '${AppConstants.frankfurterBaseUrl}/$startStr..$endStr?from=$fromUpper&to=$toUpper';
 
     debugPrint('Historical range API URL: $frankfurterRangeUrl');
 
@@ -137,7 +138,7 @@ class HistoricalRatesRemoteDataSourceImpl
 
     // 1. Primary endpoint: Universal open currency API supporting 160+ currencies directly
     final primaryUrl =
-        'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@$dateStr/v1/currencies/$fromLower.json';
+        '${AppConstants.jsdelivrApiBaseUrl}@$dateStr/v1/currencies/$fromLower.json';
 
     debugPrint('Historical request date: $dateStr');
     debugPrint('Historical API URL: $primaryUrl');
@@ -182,7 +183,7 @@ class HistoricalRatesRemoteDataSourceImpl
 
     // 1b. Intermediate USD anchor fallback on universal open currency API (e.g. JPY/CAD via USD)
     final anchorUrl =
-        'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@$dateStr/v1/currencies/usd.json';
+        '${AppConstants.jsdelivrApiBaseUrl}@$dateStr/v1/currencies/usd.json';
 
     try {
       final response = await _dio.get(
@@ -229,7 +230,7 @@ class HistoricalRatesRemoteDataSourceImpl
 
     // 2. Secondary endpoint: Frankfurter historical date endpoint
     final secondaryUrl =
-        'https://api.frankfurter.app/$dateStr?from=${fromCurrency.toUpperCase()}&to=$toUpper';
+        '${AppConstants.frankfurterBaseUrl}/$dateStr?from=${fromCurrency.toUpperCase()}&to=$toUpper';
 
     debugPrint('Historical request date: $dateStr (secondary)');
     debugPrint('Historical API URL: $secondaryUrl');

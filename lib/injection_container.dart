@@ -228,6 +228,7 @@ Future<void> initServiceLocator({
     () => FavoritesCubit(
       sl<GetFavoritesUseCase>(),
       sl<ToggleFavoriteUseCase>(),
+      widgetSyncService: sl<IWidgetSyncService>(),
     ),
   );
 
